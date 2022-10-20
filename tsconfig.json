@@ -1,0 +1,23 @@
+{
+    "compilerOptions": {
+        "lib": ["dom", "es6", "es2017", "esnext.asynciterable"],
+        "target": "es2017",
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "outDir": "./build",
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "sourceMap": false,
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        // "strictNullChecks": true,
+        // "strictFunctionTypes": true,
+        "noImplicitThis": true,
+        "noUnusedLocals": true,
+        "skipLibCheck": true,
+        "baseUrl": ".",
+        "rootDir": "src"
+    },
+    "exclude": ["node_modules", "src/index.ts"],
+    "include": ["./src/**/*.ts", "src/app.ts"]
+}
