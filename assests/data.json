@@ -1,0 +1,103 @@
+{
+  "validations": [
+    {
+      "name": "RangeValidator",
+      "type": "Range",
+      "method": "rangeValidator",
+      "required_params": [
+        {
+          "name": "min",
+          "type": "int"
+        },
+        {
+          "name": "max",
+          "type": "int"
+        }
+      ]
+    },
+    {
+      "name": "WhereIn",
+      "type": "IN",
+      "method": "containedInDefinedList",
+      "required_params": [
+        {
+          "name": "value",
+          "type": "string"
+        }
+      ]
+    }
+  ],
+  "transformations": [
+    {
+      "name": "ucfirst",
+      "method": "ucfirst",
+      "required_params": [
+        {
+          "name": "value",
+          "type": "string"
+        }
+      ]
+    }
+  ],
+  "fields": [
+    {
+      "member": [
+        {
+          "table": "member",
+          "name": "member_id",
+          "title": "Member ID",
+          "sf_map_name":"sf_member_name",
+          "type": "int",
+          "transforms": []
+        },
+        {
+          "table": "member",
+          "name": "firstname",
+          "title": "First Name",
+          "type": "string",
+          "validation": [
+            {
+              "name": "RangeValidator",
+              "required_params": [
+                {
+                  "name": "min",
+                  "value": 2
+                },
+                {
+                  "name": "max",
+                  "value": 128
+                }
+              ]
+            }
+          ],
+          "transforms": [
+            "ucfirst"
+          ]
+        },
+        {
+          "table": "member",
+          "name": "created",
+          "title": "Date Created",
+          "type": "date",
+          "transforms": [
+            "salesforce-date",
+            "marketing-cloud-date"
+          ]
+        }
+      ],
+      "team": [
+        {
+          "table": "team",
+          "name": "team_id",
+          "title": "Team ID",
+          "type": "int",
+          "validation": [{
+            "min": 3,
+            "max": 32
+          }],
+          "transforms": []
+        }
+      ]
+    }
+  ]
+}
