@@ -11,4 +11,4 @@ CREATE TABLE `dataset_fields_transformations` (
   KEY `FK_TRANSFORMATION_FIELD` (`transformation_id`),
   CONSTRAINT `FK_FIELD_TRANSFORM` FOREIGN KEY (`field_id`) REFERENCES `dataset_fields` (`id`),
   CONSTRAINT `FK_TRANSFORMATION_FIELD` FOREIGN KEY (`transformation_id`) REFERENCES `transformations` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2062609 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;

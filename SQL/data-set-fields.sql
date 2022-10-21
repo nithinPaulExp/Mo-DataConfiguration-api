@@ -1,6 +1,6 @@
 CREATE TABLE `dataset_fields` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
-  `table` varchar(150) NOT NULL,
+  `table_name` varchar(150) NOT NULL,
   `name` varchar(150) NOT NULL,
   `title` varchar(150) NOT NULL,
   `sf_map_name` varchar(150) NOT NULL,
@@ -10,4 +10,4 @@ CREATE TABLE `dataset_fields` (
   `updated` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `UNQ_DATA_FIELDS` (`campaign_id`,`table`,`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=2062609 DEFAULT CHARSET=utf8;;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;;

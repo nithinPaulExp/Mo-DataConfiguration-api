@@ -7,4 +7,4 @@ CREATE TABLE `dataset_fields_validations` (
   `updated` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `field_validation_param` (`campaign_id`,`validation_id`,`field_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2062609 DEFAULT CHARSET=utf8;;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;;

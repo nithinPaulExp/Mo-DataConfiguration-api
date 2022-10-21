@@ -1,5 +1,7 @@
 import Campaigns from '../api-models/campaigns.api.model';
 import DataCofigurationDAL from '../dal/dataconfiguration.dal';
+var fs = require('fs');
+
 const dataConfigurationDAL = new DataCofigurationDAL();
 
 export default class DataCofigurationBLL {
@@ -11,14 +13,21 @@ export default class DataCofigurationBLL {
   async checkInitialConfigurationExists(campaignId): Promise<any> {
     const getCurrentConfigurations = await dataConfigurationDAL.getDataSet(campaignId);
     if (getCurrentConfigurations){
-      return true;
+      return getCurrentConfigurations;
     }
-    return false;
+    let path ="assests/data.json";
+    const data = await fs.readFileSync(path);
+    return JSON.parse(data);
   }
 
   async updateInitialConfigurations(campaignId,obj): Promise<any> {
-   await dataConfigurationDAL.createDataSet(campaignId,obj);
-    //update the filw with the content
+   if (await dataConfigurationDAL.createDataSet(campaignId,obj)){
+      //update the filw with the content
+      let path ="assests/data.json";
+      await fs.writeFileSync(path,JSON.stringify(obj,undefined,2));
+      return true;
+   }
+   return false;
   }
 
 }

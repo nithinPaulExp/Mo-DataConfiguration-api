@@ -15,11 +15,11 @@ export default class DataCofigurationDAL {
     }
 
     async createValidations(campaignId , validations) {
-      var sql = "INSERT INTO validations (name,method,type, campaign_id) VALUES ?"; 
+      var sql = "INSERT INTO sf_validations (name,method,type, campaign_id) VALUES ?"; 
       var values =[];
       for (let i=0;i<validations.length;i++){
         var validation =validations[i];
-        values.push( [`'${validation.name}'`,`'${validation.method}'`,`'${validation.type}'`,campaignId]);
+        values.push( [`${validation.name}`,`${validation.method}`,`${validation.type}`,campaignId]);
       }
       try {
         let con = await mysqlClient.getMysqlConnection();
@@ -27,12 +27,12 @@ export default class DataCofigurationDAL {
         if (data[0] != null && data[0].affectedRows >0){
           //insert the validation params
           var validatorValues = [];
-          var sqlValidationParams = "INSERT INTO validations_params (name,type, validation_id) VALUES ?"; 
+          var sqlValidationParams = "INSERT INTO sf_validations_params (name,type, validation_id) VALUES ?"; 
           for(let i=0;i< data[0].affectedRows;i++){
             var validationId = i+ data[0].insertId;
             for(let j=0;j<validations[i].required_params.length;j++){
               var param = validations[i].required_params[j];
-              validatorValues.push([`'${param.name}'`,`'${param.type}'`,validationId]);
+              validatorValues.push([`${param.name}`,`${param.type}`,validationId]);
             }
           }
           try {
@@ -43,100 +43,325 @@ export default class DataCofigurationDAL {
             throw err;
         }
         }
+        return true;
       } catch (err) {
           console.log(err);
+          return false;
+      }
+    }
+
+    async createTransformations(campaignId , transformations) {
+      var sql = "INSERT INTO sf_transformations (name,method, campaign_id) VALUES ?"; 
+      var values =[];
+      for (let i=0;i<transformations.length;i++){
+        var transformation =transformations[i];
+        values.push( [`${transformation.name}`,`${transformation.method}`,campaignId]);
+      }
+      try {
+        let con = await mysqlClient.getMysqlConnection();
+        const data:any = await con.promise().query(sql,[values]);
+        if (data[0] != null && data[0].affectedRows >0){
+          //insert the transformation params
+          var transformationValues = [];
+          var sqlValidationParams = "INSERT INTO sf_transformation_params (name,type, transformation_id) VALUES ?"; 
+          for(let i=0;i< data[0].affectedRows;i++){
+            var tranformationId = i+ data[0].insertId;
+            for(let j=0;j<transformations[i].required_params.length;j++){
+              var param = transformations[i].required_params[j];
+              transformationValues.push([`${param.name}`,`${param.type}`,tranformationId]);
+            }
+          }
+          try {
+            let con = await mysqlClient.getMysqlConnection();
+            await con.promise().query(sqlValidationParams,[transformationValues]);
+
+          } catch (err) {
+            throw err;
+        }
+        }
+        return true;
+      } catch (err) {
+          console.log(err);
+          return false;
+      }
+    }
+
+    async createDataRecords(campaignId , fields) {
+      var sql = "INSERT INTO sf_dataset_fields (table_name, name, title, sf_map_name, type, campaign_id) VALUES ?"; 
+      var values =[];
+      var validations = [];
+      var transformations = [];
+
+      for (let i=0;i<fields.length;i++){
+        var field =fields[i];
+        values.push( [`${field.table}`,`${field.name}`,`${field.title}`,`${field.default_sf_map_name}`,`${field.type}`,campaignId]);
+        validations.push(field.validations);
+        transformations.push(field.transforms);
+      }
+      try {
+        let con = await mysqlClient.getMysqlConnection();
+        const data:any = await con.promise().query(sql,[values]);
+        if (data[0] != null && data[0].affectedRows >0){
+          let rowCount = data[0].affectedRows;
+          let dataSetId = data[0].insertId;
+          if (validations.length >0){
+            var sqlValidationParams = "INSERT INTO sf_dataset_fields_validations (field_id,validation_id, campaign_id) VALUES ?"; 
+            var validatorRecParams = [];
+            for(let i=0;i < validations.length && i < rowCount;i++){
+              let dataSetRecId = dataSetId + i;
+              let validationRecrds = validations[i];
+              if (validationRecrds != null){
+                for(let j = 0;j<validationRecrds.length;j++){
+                  let validationRec = validationRecrds[j];
+                  var sqlgetValidator = "Select id from sf_validations where name = ? and type=? and campaign_id = ? LIMIT 1";
+                  try {
+                    let con = await mysqlClient.getMysqlConnection();
+                    const validator:any = await con.promise().query(sqlgetValidator,[validationRec.name, validationRec.type, campaignId]);
+
+                    if (validator != null && validator.length >0)
+                    {
+                      let validatorRec = validator[0][0];
+                      validatorRecParams.push([`${dataSetRecId}`,`${validatorRec.id}`,campaignId]);
+                    }
+                  } catch (err) {
+                    throw err;
+                  }
+                }
+              }
+            }
+
+            try {
+              let con = await mysqlClient.getMysqlConnection();
+              var validationRecResults = await con.promise().query(sqlValidationParams,[validatorRecParams]);
+              if (validationRecResults != null && validationRecResults.length >0){
+                var validationParamFields:any = validationRecResults[0];
+                var validationRecRowCount =  validationParamFields.affectedRows;
+                let dataSetValidationRecId = validationParamFields.insertId;
+                if (validationRecRowCount >0)
+                {
+                  var sqlValidationParamsValues = "INSERT INTO sf_dataset_fields_validations_params (field_validation_id,param_id, value) VALUES ?"; 
+                  var validatorRecParamsValues = [];
+                  for(let i=0;i < validations.length && i<validationRecRowCount; i++)
+                  {
+                    let validationRec = validations[i];
+                    if (validationRec != null){
+                      for(let k = 0;k<validationRec.length;k++){
+                        let validationRecrds = validationRec[k];
+                        var params = validationRecrds.required_params;
+                        let paramValidationId = dataSetValidationRecId + i;
+                        if (params!= null && params.length >0){
+                          for(let j=0;j<params.length;j++){
+                            let validationParamRec = params[j];
+                            var sqlWhere = " AND validation_id = (SELECT validation_id from sf_dataset_fields_validations WHERE id=? and campaign_id = ? ) "
+                            var sqlgetValidatorParam = "Select id from sf_validations_params where name = ? and type=? "+sqlWhere+"LIMIT 1";
+                            try {
+                              let con = await mysqlClient.getMysqlConnection();
+                              const validatorParams:any = await con.promise().query(sqlgetValidatorParam,[validationParamRec.name, validationParamRec.type, paramValidationId, campaignId]);
+        
+                              if (validatorParams != null && validatorParams.length >0)
+                              {
+                                let validatorParamsRec = validatorParams[0][0];
+                                validatorRecParamsValues.push([`${paramValidationId}`,`${validatorParamsRec.id}`,validationParamRec.value]);
+                              }
+                            } catch (err) {
+                              throw err;
+                            }
+                          }
+                          
+                        }
+                      }
+                    }
+                  }
+                  try {
+                    let con = await mysqlClient.getMysqlConnection();
+                    await con.promise().query(sqlValidationParamsValues,[validatorRecParamsValues]);
+                  } catch (err) {
+                    throw err;
+                  }
+                }
+              }
+            } catch (err) {
+              throw err;
+            }
+          }
+
+          if (transformations.length >0){
+            var sqltransformationParams = "INSERT INTO sf_dataset_fields_transformations (field_id,transformation_id, campaign_id) VALUES ?"; 
+            var transformerRecParams = [];
+            for(let i=0;i < transformations.length && i < rowCount;i++){
+              let dataSetRecId = dataSetId + i;
+              let transformRecrds = transformations[i];
+              if (transformRecrds != null){
+                for(let j = 0;j<transformRecrds.length;j++){
+                  let transformRec = transformRecrds[j];
+                  var sqlgetTransformer = "Select id from sf_transformations where name = ? and method=? and campaign_id = ? LIMIT 1";
+                  try {
+                    let con = await mysqlClient.getMysqlConnection();
+                    const transformer:any = await con.promise().query(sqlgetTransformer,[transformRec.name, transformRec.method, campaignId]);
+
+                    if (transformer != null && transformer.length >0)
+                    {
+                      let transformerRec = transformer[0][0];
+                      transformerRecParams.push([`${dataSetRecId}`,`${transformerRec.id}`,campaignId]);
+                    }
+                  } catch (err) {
+                    throw err;
+                  }
+                }
+              }
+            }
+
+            try {
+              let con = await mysqlClient.getMysqlConnection();
+              await con.promise().query(sqltransformationParams,[transformerRecParams]);
+            } catch (err) {
+              throw err;
+            }
+          }          
+        }
+        return true;
+      } catch (err) {
+          console.log(err);
+          return false;
       }
     }
 
    async createDataSet(campaignId,obj) {
+      var hasUpdated:boolean = false;
       if (obj.validations){
-        await this.createValidations(campaignId,obj.validations)
+        hasUpdated = await this.createValidations(campaignId,obj.validations)
       }
 
       if (obj.transformations){
-        //this.createTransformations(campaignId,obj.transformations)
+        hasUpdated = await this.createTransformations(campaignId,obj.transformations)
       }
+
+      if (obj.fields && obj.fields.length >0)
+      {       
+        //create the data set 
+        hasUpdated = await this.createDataRecords (campaignId, obj.fields);
+      }
+      return hasUpdated;
     };
 
     async getDataSet(campaignId): Promise<Array<any> > {
-      let con = await mysqlClient.getMysqlConnection(); 
-      let sql = ` select df.id as field_id, df.table as field_table,df.name as field_name,df.title as field_title,df.sf_map_name as field_sf_map, df.type as field_type
-                  ,v.name as validation_name, v.method as validation_method,v.type as validation_type,
-                  t.name as transformation_name, t.method as transformation_method,
-                  dfv.id as field_validation_id, dfv.field_id as field_validation_field_id, dfv.validation_id as field_validation_validation_id,
-                  dfvp.field_validation_id as field_params_validation_id, dfvp.param_id as field_validation_param_id,dfvp.value as field_validation_value
-                  ,dft.field_id as field_transform_field_id, dft.transformation_id as field_transform_id,dft.id as field_transform_id,
-                  tp.transformation_id as transform_param_transformId, tp.name as transform_param_name,tp.id as transform_param_id ,tp.type as transform_param_type
-                  from dataset_fields df 
-                      left join dataset_fields_transformations dft
-                      on df.id = dft.field_id
-                      left join dataset_fields_validations dfv
-                      on df.id = dfv.field_id
-                      left join dataset_fields_validations_params dfvp
-                      on dfv.id = dfvp.field_validation_id
-                      left join validations v
-                      on df.campaign_id = v.campaign_id
-                      left join validations_params vp
-                      on v.id = vp.validation_id
-                      left join transformations t
-                      on df.campaign_id = t.campaign_id
-                      left join transformation_params tp
-                      on t.id = tp.transformation_id`;
-      if (campaignId == null){
-          sql += " where df.campaign_id is null";
-      }
-      else {
-          sql += " where df.campaign_id=?";
-      }
-
-      const campaignDataSet = await con.promise().query(sql,[campaignId]);          
-      if (campaignDataSet!= null && campaignDataSet.length >0 )
+      let con = await mysqlClient.getMysqlConnection();       
+      var sql = "CALL getDataSetConfiguration(?)";
+      const datasetResult = await con.promise().query(sql,[campaignId]);    
+      var datasetJson:any = {validations:[], transformations:[], fields:[]}
+          
+      if (datasetResult!= null && datasetResult.length >0 )
       {
-         //const campaignData: Array<CampaignDM> = await this.constructUserDataFromUser(campaignDataSet[0]);
-          return campaignDataSet
+         var validations = datasetResult[0][0];
+         var transformations = datasetResult[0][1];
+         //var fields = datasetResult[0][2];
+         datasetJson.validations = await this.constructValidations(validations);        
+         datasetJson.transformations= await this.constructTransformations(transformations);        
+        //datasetJson.fields = await this.constructDataSet(fields);
+          return datasetJson;
       }
       return null;
   }
 
-    // async constructDataSet(dataset:any) {
-    // var dataset:any = {validations:[], transformations:[], fields:[]}
-    //     if (dataset)
-    //     {
-    //         dataset.forEach(rec => {
-    //             let validationObj =  this.findElementInArray(dataset.validations,rec.id);
-    //             if (!validationObj)
-    //             {
-    //                 let validationObj = {
-    //                     name: rec.validation_name,
-    //                     method : rec.validation_method,
-    //                     type : rec.validation_type,
+  async constructValidations(validations) {
+    var validationsArr = [];
+    if (validations)
+    {
+      for(let i=0;i<validations.length;i++){
+        var rec = validations[i];
+        let validationObj =  this.findElementInArray(validationsArr,rec.validation_id);
+        if (!validationObj) {
+          validationObj = {
+            id: rec.validation_id,
+            name: rec.validation_name,
+            method : rec.validation_method,
+            type : rec.validation_type,
+            required_params :[]
+          }
+          validationsArr.push(validationObj);
+        }
+        // Add params to the obj
+        validationObj.required_params.push({name:rec.validation_param_name, type: rec.validation_param_type});
+      }
+    }
+    return validationsArr;
+  }
 
-    //                 }
-    //                 dataset.validations.push(validationObj);
-    //             }
-    //         });
+  async constructTransformations(transformations) {
+    var transformationsArr = [];
+    if (transformations)
+    {
+      for(let i=0;i<transformations.length;i++){
+        var rec = transformations[i];
+        let trnsformationObj =  this.findElementInArray(transformationsArr,rec.transformation_id);
+        if (!trnsformationObj) {
+          trnsformationObj = {
+            id: rec.transformation_id,
+            name: rec.transformation_name,
+            method : rec.transformation_method,
+            required_params :[]
+          }
+          
+          transformationsArr.push(trnsformationObj);
+        }
+        // Add params to the obj
+        trnsformationObj.required_params.push({name:rec.transform_param_name, type: rec.transform_param_type});
+      }
+    }
+    return transformationsArr;
+  }
+
+  async constructDataSet(dataset:any) {
+    // var datasetJson:any = {validations:[], transformations:[], fields:[]}
+    // if (dataset)
+    // {
+    //   for(let i=0;i<dataset.length;i++){
+    //     var rec = dataset[i];
+    //     let validationObj =  this.findElementInArray(datasetJson.validations,rec.validation_id);
+    //     if (!validationObj){
+    //       validationObj = {
+    //         name: rec.validation_name,
+    //         method : rec.validation_method,
+    //         type : rec.validation_type
+    //       }
     //     }
-    // }
-    // findElementInArray (array:Array<any>,id:Number)
-    // { let obj = null;
-    //     array.find(function(elem)
-    //     {
-    //         if (elem.id === id)
+    //   }
+    //     dataset.forEach(rec => {
+    //         let validationObj =  this.findElementInArray(datasetJson.validations,rec.id);
+    //         if (!validationObj)
     //         {
-    //             obj = elem;
-    //             return;
+    //             let validationObj = {
+    //                 name: rec.validation_name,
+    //                 method : rec.validation_method,
+    //                 type : rec.validation_type,
+
+    //             }
+    //             datasetJson.validations.push(validationObj);
     //         }
     //     });
-
-    //     if (obj)
-    //     {
-    //         return obj;
-    //     }
-    //     else 
-    //     {
-    //         return null;
-    //     }
     // }
+    return {};
+  }
+  findElementInArray (array:Array<any>,id:Number)
+  { let obj = null;
+      array.find(function(elem)
+      {
+          if (elem.id === id)
+          {
+              obj = elem;
+              return;
+          }
+      });
+
+      if (obj)
+      {
+          return obj;
+      }
+      else 
+      {
+          return null;
+      }
+  }
 
     async constructUserDataFromUser(campaigns:any): Promise<Array<CampaignDM>>{
 

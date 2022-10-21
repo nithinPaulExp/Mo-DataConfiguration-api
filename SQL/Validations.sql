@@ -8,4 +8,4 @@ CREATE TABLE `validations` (
   `updated` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `validation_campaign` (`campaign_id`,`name`,`method`)
-) ENGINE=InnoDB AUTO_INCREMENT=2062609 DEFAULT CHARSET=utf8;;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;;

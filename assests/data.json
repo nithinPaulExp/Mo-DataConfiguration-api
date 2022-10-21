@@ -37,67 +37,96 @@
           "type": "string"
         }
       ]
+    },
+    {
+      "name": "salesforce-date",
+      "method": "salesforce-date",
+      "required_params": [
+        {
+          "name": "value",
+          "type": "date"
+        }
+      ]
     }
   ],
   "fields": [
     {
-      "member": [
+      "table": "member",
+      "name": "member_id",
+      "title": "Member ID",
+      "default_sf_map_name": "sf_member_name",
+      "type": "int",
+      "transforms": []
+    },
+    {
+      "table": "member",
+      "name": "firstname",
+      "title": "First Name",
+      "type": "string",
+      "default_sf_map_name": "sf_first_name",
+      "validations": [
         {
-          "table": "member",
-          "name": "member_id",
-          "title": "Member ID",
-          "sf_map_name":"sf_member_name",
-          "type": "int",
-          "transforms": []
-        },
-        {
-          "table": "member",
-          "name": "firstname",
-          "title": "First Name",
-          "type": "string",
-          "validation": [
+          "name": "RangeValidator",
+          "type": "Range",
+          "required_params": [
             {
-              "name": "RangeValidator",
-              "required_params": [
-                {
-                  "name": "min",
-                  "value": 2
-                },
-                {
-                  "name": "max",
-                  "value": 128
-                }
-              ]
+              "name": "min",
+              "type": "int",
+              "value": 2
+            },
+            {
+              "name": "max",
+              "type": "int",
+              "value": 128
             }
-          ],
-          "transforms": [
-            "ucfirst"
-          ]
-        },
-        {
-          "table": "member",
-          "name": "created",
-          "title": "Date Created",
-          "type": "date",
-          "transforms": [
-            "salesforce-date",
-            "marketing-cloud-date"
           ]
         }
       ],
-      "team": [
+      "transforms": [
         {
-          "table": "team",
-          "name": "team_id",
-          "title": "Team ID",
-          "type": "int",
-          "validation": [{
-            "min": 3,
-            "max": 32
-          }],
-          "transforms": []
+          "name": "ucfirst",
+          "method": "ucfirst"
         }
       ]
+    },
+    {
+      "table": "member",
+      "name": "created",
+      "title": "Date Created",
+      "type": "date",
+      "default_sf_map_name": "created",
+      "transforms": [
+        {
+          "name": "salesforce-date",
+          "method": "salesforce-date"
+        }
+      ]
+    },
+    {
+      "table": "team",
+      "name": "team_id",
+      "title": "Team ID",
+      "type": "int",
+      "default_sf_map_name": "team_id",
+      "validations": [
+        {
+          "name": "RangeValidator",
+          "type": "Range",
+          "required_params": [
+            {
+              "name": "min",
+              "type": "int",
+              "value": 2
+            },
+            {
+              "name": "max",
+              "type": "int",
+              "value": 128
+            }
+          ]
+        }
+      ],
+      "transforms": []
     }
   ]
 }

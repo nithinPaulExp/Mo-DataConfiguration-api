@@ -11,4 +11,4 @@ CREATE TABLE `dataset_fields_validations_params` (
   KEY `FK_FIELD_VALUE_PARAM_ID` (`param_id`),
   CONSTRAINT `FK_FIELD_VALUE_VALIDATION` FOREIGN KEY (`field_validation_id`) REFERENCES `dataset_fields_validations` (`id`),
   CONSTRAINT `FK_FIELD_VALUE_PARAM_ID` FOREIGN KEY (`param_id`) REFERENCES `validations_params` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2062609 DEFAULT CHARSET=utf8;;
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8;;

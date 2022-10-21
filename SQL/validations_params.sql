@@ -8,4 +8,4 @@ CREATE TABLE `validations_params` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `validation_param` (`validation_id`,`name`),
   CONSTRAINT `FK_validation` FOREIGN KEY (`validation_id`) REFERENCES `validations` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2062609 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;

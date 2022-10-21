@@ -8,4 +8,4 @@ CREATE TABLE `transformation_params` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `validation_param` (`transformation_id`,`name`),
   CONSTRAINT `FK_transformation` FOREIGN KEY (`transformation_id`) REFERENCES `transformations` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2062609 DEFAULT CHARSET=utf8;;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;;
