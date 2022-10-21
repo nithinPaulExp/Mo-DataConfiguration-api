@@ -10,12 +10,17 @@ export default class DataCofigurationBLL {
     return automapper.map('CampaignsDM', Campaigns, campaigns);
   }
 
-  async checkInitialConfigurationExists(campaignId): Promise<any> {
+  async checkInitialConfigurationExists(campaignId,isSync): Promise<any> {
+    
+    let path ="assests/data.json";
     const getCurrentConfigurations = await dataConfigurationDAL.getDataSet(campaignId);
     if (getCurrentConfigurations){
+      
+      if (isSync){
+        await fs.writeFileSync(path,JSON.stringify(getCurrentConfigurations,undefined,2));
+      }
       return getCurrentConfigurations;
     }
-    let path ="assests/data.json";
     const data = await fs.readFileSync(path);
     return JSON.parse(data);
   }

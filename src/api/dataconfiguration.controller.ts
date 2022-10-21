@@ -9,7 +9,9 @@ export const getCampaigns = async (req: Request, res: Response) => {
 
 export const getInitialConfiguration = async (req: Request, res: Response) => {
   const campaignId = req.params['campaignId'];
-  const configurations = await dataConfigurationBLL.checkInitialConfigurationExists(campaignId);
+  const isSync = req.query['sync'] != null && req.query['sync'] === "true";
+  
+  const configurations = await dataConfigurationBLL.checkInitialConfigurationExists(campaignId,isSync);
   return res.status(200).json(configurations);
 };
 

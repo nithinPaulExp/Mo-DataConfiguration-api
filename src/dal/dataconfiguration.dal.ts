@@ -102,12 +102,11 @@ export default class DataCofigurationDAL {
         let con = await mysqlClient.getMysqlConnection();
         const data:any = await con.promise().query(sql,[values]);
         if (data[0] != null && data[0].affectedRows >0){
-          let rowCount = data[0].affectedRows;
           let dataSetId = data[0].insertId;
           if (validations.length >0){
             var sqlValidationParams = "INSERT INTO sf_dataset_fields_validations (field_id,validation_id, campaign_id) VALUES ?"; 
             var validatorRecParams = [];
-            for(let i=0;i < validations.length && i < rowCount;i++){
+            for(let i=0;i < validations.length;i++){
               let dataSetRecId = dataSetId + i;
               let validationRecrds = validations[i];
               if (validationRecrds != null){
@@ -141,14 +140,13 @@ export default class DataCofigurationDAL {
                 {
                   var sqlValidationParamsValues = "INSERT INTO sf_dataset_fields_validations_params (field_validation_id,param_id, value) VALUES ?"; 
                   var validatorRecParamsValues = [];
-                  for(let i=0;i < validations.length && i<validationRecRowCount; i++)
+                  for(let i=0;i < validations.length; i++)
                   {
                     let validationRec = validations[i];
                     if (validationRec != null){
                       for(let k = 0;k<validationRec.length;k++){
                         let validationRecrds = validationRec[k];
                         var params = validationRecrds.required_params;
-                        let paramValidationId = dataSetValidationRecId + i;
                         if (params!= null && params.length >0){
                           for(let j=0;j<params.length;j++){
                             let validationParamRec = params[j];
@@ -156,12 +154,12 @@ export default class DataCofigurationDAL {
                             var sqlgetValidatorParam = "Select id from sf_validations_params where name = ? and type=? "+sqlWhere+"LIMIT 1";
                             try {
                               let con = await mysqlClient.getMysqlConnection();
-                              const validatorParams:any = await con.promise().query(sqlgetValidatorParam,[validationParamRec.name, validationParamRec.type, paramValidationId, campaignId]);
+                              const validatorParams:any = await con.promise().query(sqlgetValidatorParam,[validationParamRec.name, validationParamRec.type, dataSetValidationRecId, campaignId]);
         
                               if (validatorParams != null && validatorParams.length >0)
                               {
                                 let validatorParamsRec = validatorParams[0][0];
-                                validatorRecParamsValues.push([`${paramValidationId}`,`${validatorParamsRec.id}`,validationParamRec.value]);
+                                validatorRecParamsValues.push([`${dataSetValidationRecId}`,`${validatorParamsRec.id}`,validationParamRec.value]);
                               }
                             } catch (err) {
                               throw err;
@@ -169,7 +167,8 @@ export default class DataCofigurationDAL {
                           }
                           
                         }
-                      }
+                      }                      
+                      dataSetValidationRecId = dataSetValidationRecId + 1;
                     }
                   }
                   try {
@@ -188,10 +187,10 @@ export default class DataCofigurationDAL {
           if (transformations.length >0){
             var sqltransformationParams = "INSERT INTO sf_dataset_fields_transformations (field_id,transformation_id, campaign_id) VALUES ?"; 
             var transformerRecParams = [];
-            for(let i=0;i < transformations.length && i < rowCount;i++){
-              let dataSetRecId = dataSetId + i;
+            for(let i=0;i < transformations.length;i++){
               let transformRecrds = transformations[i];
               if (transformRecrds != null){
+                let dataSetRecId = dataSetId + i;
                 for(let j = 0;j<transformRecrds.length;j++){
                   let transformRec = transformRecrds[j];
                   var sqlgetTransformer = "Select id from sf_transformations where name = ? and method=? and campaign_id = ? LIMIT 1";
@@ -252,13 +251,54 @@ export default class DataCofigurationDAL {
           
       if (datasetResult!= null && datasetResult.length >0 )
       {
-         var validations = datasetResult[0][0];
-         var transformations = datasetResult[0][1];
-         //var fields = datasetResult[0][2];
-         datasetJson.validations = await this.constructValidations(validations);        
-         datasetJson.transformations= await this.constructTransformations(transformations);        
-        //datasetJson.fields = await this.constructDataSet(fields);
-          return datasetJson;
+        var validations = datasetResult[0][0];
+        var transformations = datasetResult[0][1];
+        var fields = datasetResult[0][2];
+        var validationArray = await this.constructValidations(validations);      
+        datasetJson.validations = validationArray;  
+        var transformationArray = await this.constructTransformations(transformations);    
+        datasetJson.transformations  =transformationArray;        
+
+        datasetJson.fields = await this.constructDataSet(fields,validationArray,transformationArray);
+        
+        for(let i=0;i< datasetJson.validations.length;i++){
+          delete datasetJson.validations[i].id;
+          if (datasetJson.validations[i].required_params)
+          {
+            for(let j=0;j< datasetJson.validations[i].required_params.length; j++){
+              delete datasetJson.validations[i].required_params[j].id;
+            }
+          }
+        } 
+        
+        for(let i=0;i< datasetJson.transformations.length;i++){
+          delete datasetJson.transformations[i].id;
+          if (datasetJson.transformations[i].required_params)
+          {
+            for(let j=0;j< datasetJson.transformations[i].required_params.length; j++){
+              delete datasetJson.transformations[i].required_params[j].id;
+            }
+          }
+        } 
+
+        for(let i=0;i< datasetJson.fields.length;i++){
+          delete datasetJson.fields[i].id;
+          if (datasetJson.fields[i].validations)
+          {
+            for(let j=0;j< datasetJson.fields[i].validations.length; j++){
+              delete datasetJson.fields[i].validations[j].id;
+            }
+          }
+
+          if (datasetJson.fields[i].transforms)
+          {
+            for(let j=0;j< datasetJson.fields[i].transforms; j++){
+              delete datasetJson.fields[i].transforms[j].id;
+            }
+          }
+        } 
+
+        return datasetJson;
       }
       return null;
   }
@@ -281,7 +321,7 @@ export default class DataCofigurationDAL {
           validationsArr.push(validationObj);
         }
         // Add params to the obj
-        validationObj.required_params.push({name:rec.validation_param_name, type: rec.validation_param_type});
+        validationObj.required_params.push({id: rec.validation_param_id, name:rec.validation_param_name, type: rec.validation_param_type});
       }
     }
     return validationsArr;
@@ -305,43 +345,72 @@ export default class DataCofigurationDAL {
           transformationsArr.push(trnsformationObj);
         }
         // Add params to the obj
-        trnsformationObj.required_params.push({name:rec.transform_param_name, type: rec.transform_param_type});
+        trnsformationObj.required_params.push({id: rec.transform_param_id, name:rec.transform_param_name, type: rec.transform_param_type});
       }
     }
     return transformationsArr;
   }
 
-  async constructDataSet(dataset:any) {
-    // var datasetJson:any = {validations:[], transformations:[], fields:[]}
-    // if (dataset)
-    // {
-    //   for(let i=0;i<dataset.length;i++){
-    //     var rec = dataset[i];
-    //     let validationObj =  this.findElementInArray(datasetJson.validations,rec.validation_id);
-    //     if (!validationObj){
-    //       validationObj = {
-    //         name: rec.validation_name,
-    //         method : rec.validation_method,
-    //         type : rec.validation_type
-    //       }
-    //     }
-    //   }
-    //     dataset.forEach(rec => {
-    //         let validationObj =  this.findElementInArray(datasetJson.validations,rec.id);
-    //         if (!validationObj)
-    //         {
-    //             let validationObj = {
-    //                 name: rec.validation_name,
-    //                 method : rec.validation_method,
-    //                 type : rec.validation_type,
+  async constructDataSet(dataset:any,validations,transformations) {
+    var fieldsArr = [];
+    if (dataset)
+    {
+      for(let i=0;i<dataset.length;i++){
+        var rec = dataset[i];
+        let fieldObj =  this.findElementInArray(fieldsArr,rec.field_id);
+        if (!fieldObj) {
+          fieldObj = {
+            id: rec.field_id,
+            table: rec.field_table,
+            name: rec.field_name,
+            title:rec.field_title ,
+            type: rec.field_type,
+            default_sf_map_name: rec.field_sf_map,
+            validations:[],
+            transforms:[]
+          }
+          
+          fieldsArr.push(fieldObj);
+        }
+        // Add params to the obj
+        let validationObj = this.findElementInArray(validations,rec.field_validation_validation_id);
+        if(validationObj){
+          
+          let validObj = this.findElementInArray(fieldObj.validations,validationObj.id);
+          if (!validObj){
+            validObj = {
+              id: validationObj.id,
+              name: validationObj.name,
+              method : validationObj.method,
+              type : validationObj.type,
+              required_params: []
+            }
+            fieldObj.validations.push(validObj);
+          }
+          for(let i=0;i<validationObj.required_params.length;i++){
+            if (rec.field_validation_param_id == validationObj.required_params[i].id){
+              validObj.required_params.push({
+                name:validationObj.required_params[i].name, 
+                type: validationObj.required_params[i].type,
+                value: rec.field_validation_value
+              });
+            }
+          }  
+        }
 
-    //             }
-    //             datasetJson.validations.push(validationObj);
-    //         }
-    //     });
-    // }
-    return {};
+        let transformationObj = this.findElementInArray(transformations,rec.field_transform_transform_id);
+        if(transformationObj){
+          let obj = this.findElementInArray(fieldObj.transforms,transformationObj.id);
+          if (!obj){
+            delete transformationObj.required_params;  
+            fieldObj.transforms.push(transformationObj);
+          }
+        }
+      }
+    }
+    return fieldsArr;
   }
+  
   findElementInArray (array:Array<any>,id:Number)
   { let obj = null;
       array.find(function(elem)

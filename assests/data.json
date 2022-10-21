@@ -2,8 +2,8 @@
   "validations": [
     {
       "name": "RangeValidator",
-      "type": "Range",
       "method": "rangeValidator",
+      "type": "Range",
       "required_params": [
         {
           "name": "min",
@@ -17,8 +17,8 @@
     },
     {
       "name": "WhereIn",
-      "type": "IN",
       "method": "containedInDefinedList",
+      "type": "IN",
       "required_params": [
         {
           "name": "value",
@@ -29,34 +29,28 @@
   ],
   "transformations": [
     {
-      "name": "ucfirst",
-      "method": "ucfirst",
-      "required_params": [
-        {
-          "name": "value",
-          "type": "string"
-        }
-      ]
+      "name": "salesforce-date",
+      "method": "salesforce-date"
     },
     {
-      "name": "salesforce-date",
-      "method": "salesforce-date",
-      "required_params": [
-        {
-          "name": "value",
-          "type": "date"
-        }
-      ]
+      "name": "ucfirst",
+      "method": "ucfirst"
     }
   ],
   "fields": [
     {
       "table": "member",
-      "name": "member_id",
-      "title": "Member ID",
-      "default_sf_map_name": "sf_member_name",
-      "type": "int",
-      "transforms": []
+      "name": "created",
+      "title": "Date Created",
+      "type": "date",
+      "default_sf_map_name": "created",
+      "validations": [],
+      "transforms": [
+        {
+          "name": "salesforce-date",
+          "method": "salesforce-date"
+        }
+      ]
     },
     {
       "table": "member",
@@ -67,17 +61,18 @@
       "validations": [
         {
           "name": "RangeValidator",
+          "method": "rangeValidator",
           "type": "Range",
           "required_params": [
             {
-              "name": "min",
-              "type": "int",
-              "value": 2
-            },
-            {
               "name": "max",
               "type": "int",
-              "value": 128
+              "value": "128"
+            },
+            {
+              "name": "min",
+              "type": "int",
+              "value": "2"
             }
           ]
         }
@@ -91,16 +86,12 @@
     },
     {
       "table": "member",
-      "name": "created",
-      "title": "Date Created",
-      "type": "date",
-      "default_sf_map_name": "created",
-      "transforms": [
-        {
-          "name": "salesforce-date",
-          "method": "salesforce-date"
-        }
-      ]
+      "name": "member_id",
+      "title": "Member ID",
+      "type": "int",
+      "default_sf_map_name": "sf_member_name",
+      "validations": [],
+      "transforms": []
     },
     {
       "table": "team",
@@ -111,17 +102,18 @@
       "validations": [
         {
           "name": "RangeValidator",
+          "method": "rangeValidator",
           "type": "Range",
           "required_params": [
             {
-              "name": "min",
-              "type": "int",
-              "value": 2
-            },
-            {
               "name": "max",
               "type": "int",
-              "value": 128
+              "value": "7"
+            },
+            {
+              "name": "min",
+              "type": "int",
+              "value": "6"
             }
           ]
         }

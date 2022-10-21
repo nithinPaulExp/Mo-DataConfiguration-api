@@ -7,7 +7,7 @@ DEclare transformationSQL varchar (10000);
 declare fieldsSQL varchar(10000);
 
 SET validationSQL = 'SELECT v.id as validation_id,v.name as validation_name, v.method as validation_method,v.type as validation_type,
-vp.name as validation_param_name,vp.type as validation_param_type
+vp.id as validation_param_id,vp.name as validation_param_name,vp.type as validation_param_type
 from sf_validations v
 inner join sf_validations_params vp
 on v.id = vp.validation_id WHERE ';
@@ -22,7 +22,7 @@ PREPARE stmt FROM @sqlQuery;
 	EXECUTE stmt;     
 	DEALLOCATE PREPARE stmt;
 	
-SET transformationSQL = ' SELECT 	 t.name as transformation_name, t.method as transformation_method,
+SET transformationSQL = ' SELECT t.id as transformation_id, t.name as transformation_name, t.method as transformation_method,
 tp.transformation_id as transform_param_transformId, tp.name as transform_param_name,tp.id as transform_param_id ,tp.type as transform_param_type
 from sf_transformations t
 left join sf_transformation_params tp
@@ -41,7 +41,7 @@ PREPARE stmt FROM @sqlQuery;
 SET fieldsSQL = ' select df.id as field_id, df.table_name as field_table,df.name as field_name,df.title as field_title,df.sf_map_name as field_sf_map, df.type as field_type,
                   dfv.id as field_validation_id, dfv.field_id as field_validation_field_id, dfv.validation_id as field_validation_validation_id,
                   dfvp.field_validation_id as field_params_validation_id, dfvp.param_id as field_validation_param_id,dfvp.value as field_validation_value
-                  ,dft.field_id as field_transform_field_id, dft.transformation_id as field_transform_id,dft.id as field_transform_id
+                  ,dft.field_id as field_transform_field_id, dft.transformation_id as field_transform_transform_id,dft.id as field_transform_id
                   from sf_dataset_fields df 
                       left join sf_dataset_fields_transformations dft
                       on df.id = dft.field_id
