@@ -1,4 +1,4 @@
-CREATE TABLE `dataset_fields_validations_params` (
+CREATE TABLE `sf_dataset_fields_validations_params` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
   `field_validation_id` int unsigned NOT NULL,
   `param_id` int unsigned NOT NULL,

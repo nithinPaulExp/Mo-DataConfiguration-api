@@ -6,6 +6,7 @@ import { Express, Request, Response, NextFunction } from 'express';
 import apiRouter from './api/routes';
 import mysqlClient from './services/mysqlclient';
 import Mapper from './services/mapper';
+var cors = require('cors');
 
 export default class App {
   app: Express = express();
@@ -28,7 +29,8 @@ export default class App {
     );
   }
 
-  async setupMiddleware() {
+  async setupMiddleware() {    
+    this.app.use(cors());
     this.app.use(morgan(this.isDevelopmentEnv ? 'dev' : 'tiny'));
     this.app.use(bodyParser.urlencoded({ extended: false }));
     this.app.use(bodyParser.json());

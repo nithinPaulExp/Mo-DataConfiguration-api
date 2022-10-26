@@ -8,4 +8,6 @@ export default class CampaignDM {
   created: Date;
   updated: Date;
   reconfirmation_date: Date;
+  isCurrentCampaign :boolean;
+  isLifeTimeCampaign:boolean;
 }

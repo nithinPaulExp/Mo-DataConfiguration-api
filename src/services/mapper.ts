@@ -8,7 +8,7 @@ export default class Mapper {
   static async createMap() {
     automapper
       .createMap('CampaignsDM', Campaigns)
-      .forMember('title', (opts: AutoMapperJs.IMemberConfigurationOptions) => opts.ignore())
+      .forMember('title', (opts: AutoMapperJs.IMemberConfigurationOptions) => opts.mapFrom('title'))
       .forMember('start_date', (opts: AutoMapperJs.IMemberConfigurationOptions) => opts.ignore())
       .forMember('end_date', (opts: AutoMapperJs.IMemberConfigurationOptions) => opts.ignore())
       .forMember('type', (opts: AutoMapperJs.IMemberConfigurationOptions) => opts.ignore())
@@ -16,6 +16,8 @@ export default class Mapper {
       .forMember('updated', (opts: AutoMapperJs.IMemberConfigurationOptions) => opts.ignore())
       .forMember('reconfirmation_date', (opts: AutoMapperJs.IMemberConfigurationOptions) => opts.ignore())
       .forMember('campaign_id', (opts: AutoMapperJs.IMemberConfigurationOptions) => opts.mapFrom('id'))
-      .forMember('year', (opts: AutoMapperJs.IMemberConfigurationOptions) => opts.mapFrom('short_title'));
+      .forMember('isCurrentCampaign', (opts: AutoMapperJs.IMemberConfigurationOptions) => opts.mapFrom('isCurrentCampaign'))
+      .forMember('isLifeTimeCampaign', (opts: AutoMapperJs.IMemberConfigurationOptions) => opts.mapFrom('isLifeTimeCampaign'));
+      
   }
 }

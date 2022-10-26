@@ -1,4 +1,4 @@
-CREATE TABLE `transformations` (
+CREATE TABLE `sf_transformations` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
   `method` varchar(128) NOT NULL,

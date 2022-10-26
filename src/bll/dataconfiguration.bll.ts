@@ -1,7 +1,6 @@
+import S3Helper from '../services/s3Client';
 import Campaigns from '../api-models/campaigns.api.model';
 import DataCofigurationDAL from '../dal/dataconfiguration.dal';
-var fs = require('fs');
-
 const dataConfigurationDAL = new DataCofigurationDAL();
 
 export default class DataCofigurationBLL {
@@ -17,22 +16,33 @@ export default class DataCofigurationBLL {
     if (getCurrentConfigurations){
       
       if (isSync){
-        await fs.writeFileSync(path,JSON.stringify(getCurrentConfigurations,undefined,2));
+        await S3Helper.uploadFile(JSON.stringify(getCurrentConfigurations,undefined,2),path);
       }
       return getCurrentConfigurations;
     }
-    const data = await fs.readFileSync(path);
-    return JSON.parse(data);
+      
+    var data = await S3Helper.readS3JSONData(path);
+    if (data){
+      var json =  JSON.parse(data);      
+      json.is_from_file=true;
+      return json;
+    }
+    else {
+      return null;
+    }
   }
 
   async updateInitialConfigurations(campaignId,obj): Promise<any> {
    if (await dataConfigurationDAL.createDataSet(campaignId,obj)){
-      //update the filw with the content
-      let path ="assests/data.json";
-      await fs.writeFileSync(path,JSON.stringify(obj,undefined,2));
       return true;
    }
    return false;
   }
+
+  async createOrUpdateValidation(campaignId,obj,validationId=null): Promise<any> {
+    return await dataConfigurationDAL.createOrUpdateValidation(campaignId,obj,validationId);
+      
+  }
+
 
 }

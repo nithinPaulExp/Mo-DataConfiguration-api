@@ -1,4 +1,4 @@
-CREATE TABLE `dataset_fields_transformations` (
+CREATE TABLE `sf_dataset_fields_transformations` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
   `field_id` int unsigned NOT NULL,
   `transformation_id` int unsigned NOT NULL,

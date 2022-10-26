@@ -4,7 +4,7 @@ import mysqlClient from '../services/mysqlclient';
 export default class DataCofigurationDAL {
     async getCampaigns(): Promise<Array<CampaignDM> > {
         let con = await mysqlClient.getMysqlConnection(); 
-        let sql = `select * from campaign`;
+        let sql = `select * from campaign order by short_title DESC`;
         const camnpaigns = await con.promise().query(sql);          
         if (camnpaigns!= null && camnpaigns.length >0 )
         {
@@ -30,23 +30,76 @@ export default class DataCofigurationDAL {
           var sqlValidationParams = "INSERT INTO sf_validations_params (name,type, validation_id) VALUES ?"; 
           for(let i=0;i< data[0].affectedRows;i++){
             var validationId = i+ data[0].insertId;
-            for(let j=0;j<validations[i].required_params.length;j++){
-              var param = validations[i].required_params[j];
-              validatorValues.push([`${param.name}`,`${param.type}`,validationId]);
+            if (validations[i].required_params){
+              for(let j=0;j<validations[i].required_params.length;j++){
+                var param = validations[i].required_params[j];
+                validatorValues.push([`${param.name}`,`${param.type}`,validationId]);
+              }
             }
           }
-          try {
-            let con = await mysqlClient.getMysqlConnection();
-            await con.promise().query(sqlValidationParams,[validatorValues]);
+          if (validatorValues)
+          {
+            try {
+              let con = await mysqlClient.getMysqlConnection();
+              await con.promise().query(sqlValidationParams,[validatorValues]);
 
-          } catch (err) {
-            throw err;
-        }
+              } catch (err) {
+                if (err.code != "ER_DUP_ENTRY"){
+                  throw err;;
+                }
+            }
+          }
         }
         return true;
       } catch (err) {
           console.log(err);
           return false;
+      }
+    }
+    
+    async updateValidations(campaignId , validation, validationId) {
+      var sqlgetValidator = `Select * from sf_validations where campaign_id ${campaignId?' ='+campaignId:' IS NULL'} AND id= ${validationId} LIMIT 1`;
+      try {
+        let con = await mysqlClient.getMysqlConnection();
+        const validator:any = await con.promise().query(sqlgetValidator);
+
+        if (validator != null && validator.length >0)
+        {
+          let validatorRec = validator[0];
+          if (validatorRec.type != validation.type){
+            var sqlGetFields = `Select sfdf.name, sfdf.table_name from sf_dataset_fields sfdf 
+                                inner join sf_dataset_fields_validations sfdfv
+                                on sfdf.id = sfdfv.field_id
+                                WHERE sfdfv.validation_id = ${validationId}`
+            const fields:any = await con.promise().query(sqlGetFields);
+            var fieldsArray = []
+            if (fields != null && fields.length >0)
+            {
+              let fieldsRecrds = fields[0];
+              for(let i=0;i<fieldsRecrds.length; i++){
+                fieldsArray.push(fieldsRecrds[i].name +' - '+ fieldsRecrds[i].table_name);
+              }
+            }
+            return {
+              errorMessage: `You need to remove validations from the fields to update the type.
+                            fields are ${fieldsArray.join('\r\n')}`
+            };
+          }
+        }
+      } catch (err) {
+        return {
+          errorMessage: `Something went wrong!! Please try again. \n\n error: ${err}`
+        };
+      }
+      var sql = `UPDATE sf_validations SET name= ${validation.name}, method=${validation.method} ,type=${validation.type} WHERE id = ${validationId}`; 
+      try {
+        let con = await mysqlClient.getMysqlConnection();
+        await con.promise().query(sql);        
+        return {success:true};
+      } catch (err) {
+          return {
+            errorMessage: `Something went wrong!! Please try again. \n\n error: ${err}`
+          }
       }
     }
 
@@ -66,18 +119,26 @@ export default class DataCofigurationDAL {
           var sqlValidationParams = "INSERT INTO sf_transformation_params (name,type, transformation_id) VALUES ?"; 
           for(let i=0;i< data[0].affectedRows;i++){
             var tranformationId = i+ data[0].insertId;
-            for(let j=0;j<transformations[i].required_params.length;j++){
-              var param = transformations[i].required_params[j];
-              transformationValues.push([`${param.name}`,`${param.type}`,tranformationId]);
+            if (transformations[i].required_params){
+              for(let j=0;j<transformations[i].required_params.length;j++){
+                var param = transformations[i].required_params[j];
+                transformationValues.push([`${param.name}`,`${param.type}`,tranformationId]);
+              }
             }
           }
-          try {
-            let con = await mysqlClient.getMysqlConnection();
-            await con.promise().query(sqlValidationParams,[transformationValues]);
 
-          } catch (err) {
-            throw err;
-        }
+          if (transformationValues.length >0)
+          {
+            try {
+              let con = await mysqlClient.getMysqlConnection();
+              await con.promise().query(sqlValidationParams,[transformationValues]);
+
+            } catch (err) {
+              if (err.code != "ER_DUP_ENTRY"){
+                throw err;;
+              }
+            }
+          }
         }
         return true;
       } catch (err) {
@@ -109,13 +170,13 @@ export default class DataCofigurationDAL {
             for(let i=0;i < validations.length;i++){
               let dataSetRecId = dataSetId + i;
               let validationRecrds = validations[i];
-              if (validationRecrds != null){
+              if (validationRecrds != null && validationRecrds.length >0){
                 for(let j = 0;j<validationRecrds.length;j++){
                   let validationRec = validationRecrds[j];
-                  var sqlgetValidator = "Select id from sf_validations where name = ? and type=? and campaign_id = ? LIMIT 1";
+                  var sqlgetValidator = `Select id from sf_validations where name = ? and type=? and campaign_id ${campaignId?' ='+campaignId:' IS NULL'} LIMIT 1`;
                   try {
                     let con = await mysqlClient.getMysqlConnection();
-                    const validator:any = await con.promise().query(sqlgetValidator,[validationRec.name, validationRec.type, campaignId]);
+                    const validator:any = await con.promise().query(sqlgetValidator,[validationRec.name, validationRec.type]);
 
                     if (validator != null && validator.length >0)
                     {
@@ -123,7 +184,9 @@ export default class DataCofigurationDAL {
                       validatorRecParams.push([`${dataSetRecId}`,`${validatorRec.id}`,campaignId]);
                     }
                   } catch (err) {
-                    throw err;
+                    if (err.code != "ER_DUP_ENTRY"){
+                      throw err;;
+                    }
                   }
                 }
               }
@@ -143,18 +206,18 @@ export default class DataCofigurationDAL {
                   for(let i=0;i < validations.length; i++)
                   {
                     let validationRec = validations[i];
-                    if (validationRec != null){
+                    if (validationRec != null && validationRec.length >0){
                       for(let k = 0;k<validationRec.length;k++){
                         let validationRecrds = validationRec[k];
                         var params = validationRecrds.required_params;
                         if (params!= null && params.length >0){
                           for(let j=0;j<params.length;j++){
                             let validationParamRec = params[j];
-                            var sqlWhere = " AND validation_id = (SELECT validation_id from sf_dataset_fields_validations WHERE id=? and campaign_id = ? ) "
+                            var sqlWhere = ` AND validation_id = (SELECT validation_id from sf_dataset_fields_validations WHERE id=? and campaign_id ${campaignId?' ='+campaignId:' IS NULL'} ) `;
                             var sqlgetValidatorParam = "Select id from sf_validations_params where name = ? and type=? "+sqlWhere+"LIMIT 1";
                             try {
                               let con = await mysqlClient.getMysqlConnection();
-                              const validatorParams:any = await con.promise().query(sqlgetValidatorParam,[validationParamRec.name, validationParamRec.type, dataSetValidationRecId, campaignId]);
+                              const validatorParams:any = await con.promise().query(sqlgetValidatorParam,[validationParamRec.name, validationParamRec.type, dataSetValidationRecId]);
         
                               if (validatorParams != null && validatorParams.length >0)
                               {
@@ -162,7 +225,9 @@ export default class DataCofigurationDAL {
                                 validatorRecParamsValues.push([`${dataSetValidationRecId}`,`${validatorParamsRec.id}`,validationParamRec.value]);
                               }
                             } catch (err) {
-                              throw err;
+                              if (err.code != "ER_DUP_ENTRY"){
+                                throw err;;
+                              }
                             }
                           }
                           
@@ -175,12 +240,16 @@ export default class DataCofigurationDAL {
                     let con = await mysqlClient.getMysqlConnection();
                     await con.promise().query(sqlValidationParamsValues,[validatorRecParamsValues]);
                   } catch (err) {
-                    throw err;
+                    if (err.code != "ER_DUP_ENTRY"){
+                      throw err;;
+                    }
                   }
                 }
               }
             } catch (err) {
-              throw err;
+              if (err.code != "ER_DUP_ENTRY"){
+                throw err;;
+              }
             }
           }
 
@@ -189,14 +258,14 @@ export default class DataCofigurationDAL {
             var transformerRecParams = [];
             for(let i=0;i < transformations.length;i++){
               let transformRecrds = transformations[i];
-              if (transformRecrds != null){
+              if (transformRecrds != null && transformRecrds.length >0){
                 let dataSetRecId = dataSetId + i;
                 for(let j = 0;j<transformRecrds.length;j++){
                   let transformRec = transformRecrds[j];
-                  var sqlgetTransformer = "Select id from sf_transformations where name = ? and method=? and campaign_id = ? LIMIT 1";
+                  var sqlgetTransformer = `Select id from sf_transformations where name = ? and method=? and campaign_id ${campaignId?' ='+campaignId:' IS NULL'} LIMIT 1`;
                   try {
                     let con = await mysqlClient.getMysqlConnection();
-                    const transformer:any = await con.promise().query(sqlgetTransformer,[transformRec.name, transformRec.method, campaignId]);
+                    const transformer:any = await con.promise().query(sqlgetTransformer,[transformRec.name, transformRec.method]);
 
                     if (transformer != null && transformer.length >0)
                     {
@@ -204,7 +273,9 @@ export default class DataCofigurationDAL {
                       transformerRecParams.push([`${dataSetRecId}`,`${transformerRec.id}`,campaignId]);
                     }
                   } catch (err) {
-                    throw err;
+                    if (err.code != "ER_DUP_ENTRY"){
+                      throw err;;
+                    }
                   }
                 }
               }
@@ -214,7 +285,9 @@ export default class DataCofigurationDAL {
               let con = await mysqlClient.getMysqlConnection();
               await con.promise().query(sqltransformationParams,[transformerRecParams]);
             } catch (err) {
-              throw err;
+              if (err.code != "ER_DUP_ENTRY"){
+                throw err;;
+              }
             }
           }          
         }
@@ -222,6 +295,23 @@ export default class DataCofigurationDAL {
       } catch (err) {
           console.log(err);
           return false;
+      }
+    }
+
+    async createOrUpdateValidation(campaignId, obj, validationId){
+      if (!validationId){
+        if (!await this.createValidations(campaignId,[obj])){
+          return {
+            errorMessage: `Something went wrong!! Please try again.`
+          };
+        } else {
+          return {
+            success: true
+          };
+        }
+      }
+      else {
+        return await this.updateValidations(campaignId,obj,validationId);
       }
     }
 
@@ -246,14 +336,18 @@ export default class DataCofigurationDAL {
     async getDataSet(campaignId): Promise<Array<any> > {
       let con = await mysqlClient.getMysqlConnection();       
       var sql = "CALL getDataSetConfiguration(?)";
-      const datasetResult = await con.promise().query(sql,[campaignId]);    
+      const datasetResult = await con.promise().query(sql,[campaignId?campaignId:null]);  
+      
+        
       var datasetJson:any = {validations:[], transformations:[], fields:[]}
-          
       if (datasetResult!= null && datasetResult.length >0 )
       {
         var validations = datasetResult[0][0];
         var transformations = datasetResult[0][1];
         var fields = datasetResult[0][2];
+        if ((validations == null || validations.length == 0 )&& (transformations == null || transformations.length == 0) && (fields == null || fields.length == 0)){
+          return null;
+        }
         var validationArray = await this.constructValidations(validations);      
         datasetJson.validations = validationArray;  
         var transformationArray = await this.constructTransformations(transformations);    
@@ -434,7 +528,14 @@ export default class DataCofigurationDAL {
 
     async constructUserDataFromUser(campaigns:any): Promise<Array<CampaignDM>>{
 
+      var currenYear = new Date().getFullYear();
         const campaignArr:CampaignDM[] = new Array<CampaignDM>();
+        var lifeTimeCampaign = new CampaignDM();
+        lifeTimeCampaign.title = 'Life Time';
+        lifeTimeCampaign.id =null;
+        lifeTimeCampaign.short_title = null;
+        lifeTimeCampaign.isLifeTimeCampaign =true;
+        campaignArr.push(lifeTimeCampaign);
         if (campaigns)
         {
             campaigns.forEach(campaignRec => {
@@ -451,6 +552,9 @@ export default class DataCofigurationDAL {
                     campaign.created = campaignRec.created;
                     campaign.updated = campaignRec.updated;
                     campaign.reconfirmation_date = campaignRec.reconfirmation_date;
+                    if (campaign.short_title === currenYear){
+                      campaign.isCurrentCampaign =true;
+                    }
                     campaignArr.push(campaign);
                 }
             });
