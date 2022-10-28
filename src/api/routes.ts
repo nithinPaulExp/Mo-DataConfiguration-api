@@ -27,6 +27,34 @@ apiRouter.put(
   '/dataconfiguration/validation/:campaignId?',
   asyncErrHandler(dataConfigurationController.updateValidation),
 );
+apiRouter.delete(
+  '/dataconfiguration/validations/:id?',
+  asyncErrHandler(dataConfigurationController.deleteValidation),
+);
+
+apiRouter.get(
+  '/dataconfiguration/validations/:campaignId?',
+  asyncErrHandler(dataConfigurationController.getValidations),
+);
+
+
+apiRouter.post(
+  '/dataconfiguration/transformation/:campaignId?',
+  asyncErrHandler(dataConfigurationController.createTransformation),
+);
+apiRouter.put(
+  '/dataconfiguration/transformation/:campaignId?',
+  asyncErrHandler(dataConfigurationController.updateTransformation),
+);
+apiRouter.delete(
+  '/dataconfiguration/transformation/:id?',
+  asyncErrHandler(dataConfigurationController.deleteTransformations),
+);
+
+apiRouter.get(
+  '/dataconfiguration/transformation/:campaignId?',
+  asyncErrHandler(dataConfigurationController.getTransformations),
+);
 
 apiRouter.get('/dataconfiguration/campaigns', asyncErrHandler(dataConfigurationController.getCampaigns));
 

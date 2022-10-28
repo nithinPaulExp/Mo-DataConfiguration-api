@@ -50,4 +50,70 @@ export const updateInitialConfiguration = async (req: Request, res: Response) =>
       return res.status(200).json(response);
     }
     return res.status(200).json(response);
+  }; 
+
+  export const deleteValidation = async (req: Request, res: Response) => {
+    const id = req.params['id'];
+    if (id== null){
+      return res.status(200).json({errorMessage:"validation id is missing"});
+    }
+    var response = await dataConfigurationBLL.deleteValidation(id)
+    if (response.errorMessage){
+      return res.status(200).json(response);
+    }
+    return res.status(200).json(response);
+  }; 
+  
+  export const getValidations = async (req: Request, res: Response) => {
+    const campaignId = req.params['campaignId'];
+    const validations = await dataConfigurationBLL.getValidations(campaignId);
+    if (validations == null){
+      return res.status(200).json({error:"Something went wrong, No validations found"});
+    }
+    return res.status(200).json(validations);
+  };
+
+  export const createTransformation = async (req: Request, res: Response) => {
+    const campaignId = req.params['campaignId'];
+    const dataSet = req.body;
+    var response = await dataConfigurationBLL.createOrUpdateTransformation(campaignId,dataSet)
+    if (response.errorMessage){
+      return res.status(400).json(response);
+    }
+    return res.status(200).json(response);
   };  
+
+  export const updateTransformation = async (req: Request, res: Response) => {
+    const campaignId = req.params['campaignId'];
+    const dataSet = req.body;
+    const id = req.query['id'];
+    if (id== null){
+      return res.status(200).json({errorMessage:"transformation id is missing"});
+    }
+    var response = await dataConfigurationBLL.createOrUpdateTransformation(campaignId,dataSet,id)
+    if (response.errorMessage){
+      return res.status(200).json(response);
+    }
+    return res.status(200).json(response);
+  }; 
+
+  export const deleteTransformations = async (req: Request, res: Response) => {
+    const id = req.params['id'];
+    if (id== null){
+      return res.status(200).json({errorMessage:"transformation id is missing"});
+    }
+    var response = await dataConfigurationBLL.deleteTransformation(id)
+    if (response.errorMessage){
+      return res.status(200).json(response);
+    }
+    return res.status(200).json(response);
+  }; 
+  
+  export const getTransformations = async (req: Request, res: Response) => {
+    const campaignId = req.params['campaignId'];
+    const transformations = await dataConfigurationBLL.getTransformations(campaignId);
+    if (transformations == null){
+      return res.status(200).json({error:"Something went wrong, No transformations found"});
+    }
+    return res.status(200).json(transformations);
+  };

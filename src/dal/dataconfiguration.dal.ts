@@ -72,18 +72,23 @@ export default class DataCofigurationDAL {
                                 on sfdf.id = sfdfv.field_id
                                 WHERE sfdfv.validation_id = ${validationId}`
             const fields:any = await con.promise().query(sqlGetFields);
-            var fieldsArray = []
             if (fields != null && fields.length >0)
             {
               let fieldsRecrds = fields[0];
-              for(let i=0;i<fieldsRecrds.length; i++){
-                fieldsArray.push(fieldsRecrds[i].name +' - '+ fieldsRecrds[i].table_name);
+              if (fieldsRecrds.length >0)
+              {
+                var fieldString = "<ul>";
+                for(let i=0;i<fieldsRecrds.length; i++){
+                  fieldString += "<li>"+fieldsRecrds[i].name+" - <b>"+fieldsRecrds[i].table_name +' - '+fieldsRecrds[i].object+"</b></li>";
+                }
+                fieldString += "</ul>";
+                return {
+                  errorMessage: `You need to remove validations from the fields to update the type.<br/>
+                                <b>Fields are (Field Name - Table Name - Object)</b> <br/>${fieldString}`
+                };
               }
             }
-            return {
-              errorMessage: `You need to remove validations from the fields to update the type.
-                            fields are ${fieldsArray.join('\r\n')}`
-            };
+            
           }
         }
       } catch (err) {
@@ -91,7 +96,117 @@ export default class DataCofigurationDAL {
           errorMessage: `Something went wrong!! Please try again. \n\n error: ${err}`
         };
       }
-      var sql = `UPDATE sf_validations SET name= ${validation.name}, method=${validation.method} ,type=${validation.type} WHERE id = ${validationId}`; 
+      var sql = `UPDATE sf_validations SET name= '${validation.name}', method='${validation.method}' WHERE id = ${validationId}`; 
+      try {
+        let con = await mysqlClient.getMysqlConnection();
+        await con.promise().query(sql);        
+        return {success:true};
+      } catch (err) {
+          return {
+            errorMessage: `Something went wrong!! Please try again. \n\n error: ${err}`
+          }
+      }
+    }
+
+    async deleteValidation(validationId) {
+      var sqlgetValidator = `Select * from sf_validations where id= ${validationId} LIMIT 1`;
+      try {
+        let con = await mysqlClient.getMysqlConnection();
+        const validator:any = await con.promise().query(sqlgetValidator);
+
+        if (validator != null && validator.length >0 && validator[0].length >0)
+        {
+          var sqlGetFields = `Select sfdf.name, sfdf.table_name from sf_dataset_fields sfdf 
+                              inner join sf_dataset_fields_validations sfdfv
+                              on sfdf.id = sfdfv.field_id
+                              WHERE sfdfv.validation_id = ${validationId}`
+          const fields:any = await con.promise().query(sqlGetFields);
+          if (fields != null && fields.length >0)
+          {
+            let fieldsRecrds = fields[0];
+            if (fieldsRecrds.length >0)
+            {
+              var fieldString = "<ul>";
+              for(let i=0;i<fieldsRecrds.length; i++){
+                fieldString += "<li>"+fieldsRecrds[i].name+" - <b>"+fieldsRecrds[i].table_name +' - '+fieldsRecrds[i].object+"</b></li>";
+              }
+              fieldString += "</ul>";
+              return {
+                errorMessage: `You need to remove validations from the fields to delete the validation.<br/>
+                              <b>Fields are (Field Name - Table Name - Object)</b> <br/>${fieldString}`
+              };
+            }
+          }
+        }
+      } catch (err) {
+        return {
+          errorMessage: `Something went wrong!! Please try again. \n\n error: ${err}`
+        };
+      }
+      var sql = `DELETE FROM sf_validations WHERE id = ${validationId}`; 
+      try {
+        let con = await mysqlClient.getMysqlConnection();
+        await con.promise().query(sql);        
+        return {success:true};
+      } catch (err) {
+          return {
+            errorMessage: `Something went wrong!! Please try again. \n\n error: ${err}`
+          }
+      }
+    }
+
+    
+    async updateTransformations(campaignId , transformation, transformationId) {
+      var sql = `UPDATE sf_transformations SET name= '${transformation.name}', method='${transformation.method}' WHERE id = ${transformationId}`; 
+      try {
+        let con = await mysqlClient.getMysqlConnection();
+        await con.promise().query(sql);        
+        return {success:true};
+      } catch (err) {
+          return {
+            errorMessage: `Something went wrong!! Please try again. \n\n error: ${err}`
+          }
+      }
+    }
+
+    async deleteTransformation(transformationId) {
+      var sqlgetTransformer = `Select * from sf_transformations where id= ${transformationId} LIMIT 1`;
+      try {
+        let con = await mysqlClient.getMysqlConnection();
+        const transformations:any = await con.promise().query(sqlgetTransformer);
+
+        if (transformations != null && transformations.length >0 && transformations[0].length >0)
+        {
+          var sqlGetFields = `Select sfdf.name, sfdf.table_name from sf_dataset_fields sfdf 
+                              inner join sf_dataset_fields_transformations sfdft
+                              on sfdf.id = sfdft.field_id
+                              WHERE sfdft.transformation_id = ${transformationId}`
+          const fields:any = await con.promise().query(sqlGetFields);
+         
+          if (fields != null && fields.length >0)
+          {
+            let fieldsRecrds = fields[0];
+            if (fieldsRecrds.length >0)
+            {
+              var fieldString = "<ul>";
+              for(let i=0;i<fieldsRecrds.length; i++){
+                fieldString += "<li>"+fieldsRecrds[i].name+" - <b>"+fieldsRecrds[i].table_name +' - '+fieldsRecrds[i].object+"</b></li>";
+              }
+              fieldString += "</ul>";
+              return {
+                errorMessage: `You need to remove transformation from the fields to delete the transformation.<br/>
+                              <b>Fields are (Field Name - Table Name - Object)</b> <br/>${fieldString}`
+              };
+
+            }
+          }
+        }
+      } catch (err) {
+        return {
+          errorMessage: `Something went wrong!! Please try again. \n\n error: ${err}`
+        };
+      }
+      var sql = `DELETE FROM sf_transformations WHERE id = ${transformationId}`; 
       try {
         let con = await mysqlClient.getMysqlConnection();
         await con.promise().query(sql);        
@@ -148,14 +263,14 @@ export default class DataCofigurationDAL {
     }
 
     async createDataRecords(campaignId , fields) {
-      var sql = "INSERT INTO sf_dataset_fields (table_name, name, title, sf_map_name, type, campaign_id) VALUES ?"; 
+      var sql = "INSERT INTO sf_dataset_fields (table_name, object,alias_name, join_type,join_table,join_parent_column, join_target_column, name, title, sf_map_name, type, campaign_id) VALUES ?"; 
       var values =[];
       var validations = [];
       var transformations = [];
 
       for (let i=0;i<fields.length;i++){
         var field =fields[i];
-        values.push( [`${field.table}`,`${field.name}`,`${field.title}`,`${field.default_sf_map_name}`,`${field.type}`,campaignId]);
+        values.push( [`${field.table}`,`${field.object}`,`${field.alias_name}`,`${field.join_type}`,`${field.join_table}`,`${field.join_parent_column}`,`${field.join_target_column}`,`${field.name}`,`${field.title}`,`${field.default_sf_map_name}`,`${field.type}`,campaignId]);
         validations.push(field.validations);
         transformations.push(field.transforms);
       }
@@ -298,6 +413,32 @@ export default class DataCofigurationDAL {
       }
     }
 
+    async getValidations(campaignId){
+      var sql = `SELECT v.id as validation_id,v.name as validation_name, v.method as validation_method,v.type as validation_type
+      from sf_validations v WHERE v.campaign_id${campaignId?' ='+campaignId:' IS NULL'}`;
+
+      let con = await mysqlClient.getMysqlConnection();  
+      
+      const validationResult = await con.promise().query(sql);          
+        if (validationResult!= null && validationResult.length >0 )
+        {          
+          return validationResult[0];
+        }  
+    }
+
+    async getTransformations(campaignId){
+      var sql = `SELECT t.id as transformation_id,t.name as transformation_name, t.method as transformation_method
+      from sf_transformations t WHERE t.campaign_id${campaignId?' ='+campaignId:' IS NULL'}`;
+
+      let con = await mysqlClient.getMysqlConnection();  
+      
+      const transformationResult = await con.promise().query(sql);          
+        if (transformationResult!= null && transformationResult.length >0 )
+        {          
+          return transformationResult[0];
+        }  
+    }
+
     async createOrUpdateValidation(campaignId, obj, validationId){
       if (!validationId){
         if (!await this.createValidations(campaignId,[obj])){
@@ -312,6 +453,23 @@ export default class DataCofigurationDAL {
       }
       else {
         return await this.updateValidations(campaignId,obj,validationId);
+      }
+    }
+
+    async createOrUpdateTransformation(campaignId, obj, transformationId){
+      if (!transformationId){
+        if (!await this.createTransformations(campaignId,[obj])){
+          return {
+            errorMessage: `Something went wrong!! Please try again.`
+          };
+        } else {
+          return {
+            success: true
+          };
+        }
+      }
+      else {
+        return await this.updateTransformations(campaignId,obj,transformationId);
       }
     }
 
@@ -459,6 +617,12 @@ export default class DataCofigurationDAL {
             name: rec.field_name,
             title:rec.field_title ,
             type: rec.field_type,
+            object: rec.object,
+            alias_name:rec.alias_name,
+            join_type :rec.join_type,
+            join_table:rec.join_table,
+            join_parent_column:rec.join_parent_column,
+            join_target_column:rec.join_target_column,
             default_sf_map_name: rec.field_sf_map,
             validations:[],
             transforms:[]

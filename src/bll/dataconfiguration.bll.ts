@@ -43,6 +43,30 @@ export default class DataCofigurationBLL {
     return await dataConfigurationDAL.createOrUpdateValidation(campaignId,obj,validationId);
       
   }
+  async getValidations(campaignId): Promise<any> {
+    return await dataConfigurationDAL.getValidations(campaignId);
+      
+  }
 
+  
+  async deleteValidation(validationId): Promise<any> {
+    return await dataConfigurationDAL.deleteValidation(validationId);
+      
+  }
+
+  async createOrUpdateTransformation(campaignId,obj,transformationId=null): Promise<any> {
+    return await dataConfigurationDAL.createOrUpdateTransformation(campaignId,obj,transformationId);
+      
+  }
+  async getTransformations(campaignId): Promise<any> {
+    return await dataConfigurationDAL.getTransformations(campaignId);
+      
+  }
+
+  
+  async deleteTransformation(transformationId): Promise<any> {
+    return await dataConfigurationDAL.deleteTransformation(transformationId);
+      
+  }
 
 }

@@ -38,7 +38,7 @@ PREPARE stmt FROM @sqlQuery;
 	EXECUTE stmt;     
 	DEALLOCATE PREPARE stmt;
 
-SET fieldsSQL = ' select df.id as field_id, df.table_name as field_table,df.name as field_name,df.title as field_title,df.sf_map_name as field_sf_map, df.type as field_type,
+SET fieldsSQL = ' select df.id as field_id, df.table_name as field_table,df.name as field_name,df.title as field_title,df.sf_map_name as field_sf_map, df.type as field_type,df.object,df.alias_name,df.join_type,df.join_table,df.join_parent_column,df.join_target_column,
                   dfv.id as field_validation_id, dfv.field_id as field_validation_field_id, dfv.validation_id as field_validation_validation_id,
                   dfvp.field_validation_id as field_params_validation_id, dfvp.param_id as field_validation_param_id,dfvp.value as field_validation_value
                   ,dft.field_id as field_transform_field_id, dft.transformation_id as field_transform_transform_id,dft.id as field_transform_id
