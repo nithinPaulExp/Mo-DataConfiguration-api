@@ -9,6 +9,6 @@ CREATE TABLE `sf_dataset_fields_validations_params` (
   UNIQUE KEY `field_validation_param` (`field_validation_id`,`param_id`),
   KEY `FK_FIELD_VALUE_VALIDATION` (`field_validation_id`),
   KEY `FK_FIELD_VALUE_PARAM_ID` (`param_id`),
-  CONSTRAINT `FK_FIELD_VALUE_VALIDATION` FOREIGN KEY (`field_validation_id`) REFERENCES `dataset_fields_validations` (`id`),
-  CONSTRAINT `FK_FIELD_VALUE_PARAM_ID` FOREIGN KEY (`param_id`) REFERENCES `validations_params` (`id`)
+  CONSTRAINT `FK_FIELD_VALUE_VALIDATION` FOREIGN KEY (`field_validation_id`) REFERENCES `sf_dataset_fields_validations` (`id`),
+  CONSTRAINT `FK_FIELD_VALUE_PARAM_ID` FOREIGN KEY (`param_id`) REFERENCES `sf_validations_params` (`id`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=utf8;;

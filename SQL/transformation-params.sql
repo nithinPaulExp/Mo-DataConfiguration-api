@@ -7,5 +7,5 @@ CREATE TABLE `sf_transformation_params` (
   `updated` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `validation_param` (`transformation_id`,`name`),
-  CONSTRAINT `FK_transformation` FOREIGN KEY (`transformation_id`) REFERENCES `transformations` (`id`)
+  CONSTRAINT `FK_transformation` FOREIGN KEY (`transformation_id`) REFERENCES `sf_transformations` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;;

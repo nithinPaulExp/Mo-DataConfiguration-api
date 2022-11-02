@@ -15,6 +15,11 @@ apiRouter.get(
   asyncErrHandler(dataConfigurationController.getInitialConfiguration),
 );
 
+apiRouter.get(
+  '/dataconfiguration/objects/:campaignId?',
+  asyncErrHandler(dataConfigurationController.getObjects),
+);
+
 apiRouter.post(
   '/dataconfiguration/createinitialconfigurations/:campaignId?',
   asyncErrHandler(dataConfigurationController.updateInitialConfiguration),
@@ -54,6 +59,24 @@ apiRouter.delete(
 apiRouter.get(
   '/dataconfiguration/transformation/:campaignId?',
   asyncErrHandler(dataConfigurationController.getTransformations),
+);
+
+apiRouter.get(
+  '/dataconfiguration/fields/:campaignId?',
+  asyncErrHandler(dataConfigurationController.getFields),
+);
+apiRouter.post(
+  '/dataconfiguration/fields/:campaignId?',
+  asyncErrHandler(dataConfigurationController.createField),
+);
+apiRouter.put(
+  '/dataconfiguration/fields/:campaignId?',
+  asyncErrHandler(dataConfigurationController.updateField),
+);
+
+apiRouter.delete(
+  '/dataconfiguration/fields/:id',
+  asyncErrHandler(dataConfigurationController.deleteField),
 );
 
 apiRouter.get('/dataconfiguration/campaigns', asyncErrHandler(dataConfigurationController.getCampaigns));

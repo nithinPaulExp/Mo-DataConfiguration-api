@@ -8,12 +8,14 @@ CREATE TABLE `sf_dataset_fields` (
   `campaign_id` int DEFAULT NULL,
   `created` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `object` varchar(100) NOT NULL,
+  `object` int unsigned NOT NULL,
   `alias_name` varchar(500) NOT NULL,
-  `join_type` varchar(100) NOT NULL,
-  `join_table` varchar(500) NOT NULL,
-  `join_parent_column` varchar(500) NOT NULL,
-  `join_target_column` varchar(500) NOT NULL,
+  `join_type` varchar(100) DEFAULT NULL,
+  `join_table` varchar(500) DEFAULT NULL,
+  `join_parent_column` varchar(500) DEFAULT NULL,
+  `join_target_column` varchar(500) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `UNQ_DATA_FIELDS` (`campaign_id`,`table_name`,`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+  UNIQUE KEY `UNQ_DATA_FIELDS` (`campaign_id`,`table_name`,`name`,`object`),
+  KEY `FK_OBJECT` (`object`),
+  CONSTRAINT `FK_OBJECT` FOREIGN KEY (`object`) REFERENCES `sf_dataset_objects` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8;

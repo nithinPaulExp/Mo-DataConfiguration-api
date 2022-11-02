@@ -5,6 +5,7 @@ BEGIN
 Declare validationSQL varchar(10000);
 DEclare transformationSQL varchar (10000);
 declare fieldsSQL varchar(10000);
+declare objectsSQL varchar(10000);
 
 SET validationSQL = 'SELECT v.id as validation_id,v.name as validation_name, v.method as validation_method,v.type as validation_type,
 vp.id as validation_param_id,vp.name as validation_param_name,vp.type as validation_param_type
@@ -38,11 +39,13 @@ PREPARE stmt FROM @sqlQuery;
 	EXECUTE stmt;     
 	DEALLOCATE PREPARE stmt;
 
-SET fieldsSQL = ' select df.id as field_id, df.table_name as field_table,df.name as field_name,df.title as field_title,df.sf_map_name as field_sf_map, df.type as field_type,df.object,df.alias_name,df.join_type,df.join_table,df.join_parent_column,df.join_target_column,
+SET fieldsSQL = ' select df.id as field_id, df.table_name as field_table,df.name as field_name,df.title as field_title,df.sf_map_name as field_sf_map, df.type as field_type,df.object,obj.display_name as object_name,df.alias_name,df.join_type,df.join_table,df.join_parent_column,df.join_target_column,
                   dfv.id as field_validation_id, dfv.field_id as field_validation_field_id, dfv.validation_id as field_validation_validation_id,
                   dfvp.field_validation_id as field_params_validation_id, dfvp.param_id as field_validation_param_id,dfvp.value as field_validation_value
                   ,dft.field_id as field_transform_field_id, dft.transformation_id as field_transform_transform_id,dft.id as field_transform_id
                   from sf_dataset_fields df 
+                      inner join sf_dataset_objects obj
+                      on df.object = obj.id
                       left join sf_dataset_fields_transformations dft
                       on df.id = dft.field_id
                       left join sf_dataset_fields_validations dfv
@@ -57,6 +60,18 @@ SET fieldsSQL = ' select df.id as field_id, df.table_name as field_table,df.name
 	end if;
               
 SET @sqlQuery = fieldsSQL;
+PREPARE stmt FROM @sqlQuery;
+	EXECUTE stmt;     
+	DEALLOCATE PREPARE stmt;
+	
+SET objectsSQL = ' SELECT id,name, display_name, api_endpoint, sqs_topic_arn from sf_dataset_objects WHERE ';
+
+if campaignId IS NULL then
+ SET objectsSQL = CONCAT(objectsSQL,'campaign_id is null');
+ else 
+ SET objectsSQL = CONCAT(objectsSQL,'campaign_id=',campaignId);
+end if;
+SET @sqlQuery = objectsSQL;
 PREPARE stmt FROM @sqlQuery;
 	EXECUTE stmt;     
 	DEALLOCATE PREPARE stmt;

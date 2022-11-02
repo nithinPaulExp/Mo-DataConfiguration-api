@@ -9,6 +9,6 @@ CREATE TABLE `sf_dataset_fields_transformations` (
   UNIQUE KEY `field_validation_param` (`campaign_id`,`transformation_id`,`field_id`),
   KEY `FK_FIELD` (`field_id`),
   KEY `FK_TRANSFORMATION_FIELD` (`transformation_id`),
-  CONSTRAINT `FK_FIELD_TRANSFORM` FOREIGN KEY (`field_id`) REFERENCES `dataset_fields` (`id`),
-  CONSTRAINT `FK_TRANSFORMATION_FIELD` FOREIGN KEY (`transformation_id`) REFERENCES `transformations` (`id`)
+  CONSTRAINT `FK_FIELD_TRANSFORM` FOREIGN KEY (`field_id`) REFERENCES `sf_dataset_fields` (`id`),
+  CONSTRAINT `FK_TRANSFORMATION_FIELD` FOREIGN KEY (`transformation_id`) REFERENCES `sf_transformations` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;

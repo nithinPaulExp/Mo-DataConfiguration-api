@@ -9,6 +9,10 @@ export default class DataCofigurationBLL {
     return automapper.map('CampaignsDM', Campaigns, campaigns);
   }
 
+  async getObjects(campaignId): Promise<any> {
+    return await dataConfigurationDAL.getObjects(campaignId);
+  }
+
   async checkInitialConfigurationExists(campaignId,isSync): Promise<any> {
     
     let path ="assests/data.json";
@@ -66,6 +70,21 @@ export default class DataCofigurationBLL {
   
   async deleteTransformation(transformationId): Promise<any> {
     return await dataConfigurationDAL.deleteTransformation(transformationId);
+      
+  }
+
+  async createOrUpdateFields(campaignId,obj,fieldId=null): Promise<any> {
+    return await dataConfigurationDAL.createOrUpdateFields(campaignId,obj,fieldId);
+      
+  }
+  async getFields(campaignId,object = null): Promise<any> {
+    return await dataConfigurationDAL.getFields(campaignId,object);
+      
+  }
+
+  
+  async deleteField(fieldId): Promise<any> {
+    return await dataConfigurationDAL.deleteField(fieldId);
       
   }
 

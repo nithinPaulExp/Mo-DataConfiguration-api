@@ -7,5 +7,5 @@ CREATE TABLE `sf_validations_params` (
   `updated` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `validation_param` (`validation_id`,`name`),
-  CONSTRAINT `FK_validation` FOREIGN KEY (`validation_id`) REFERENCES `validations` (`id`)
+  CONSTRAINT `FK_validation` FOREIGN KEY (`validation_id`) REFERENCES `sf_validations` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
