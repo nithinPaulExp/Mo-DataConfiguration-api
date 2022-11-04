@@ -1,6 +1,6 @@
 CREATE TABLE `sf_dataset_fields` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
-  `table_name` varchar(150) NOT NULL,
+  `table_id` int unsigned NOT NULL,
   `name` varchar(150) NOT NULL,
   `title` varchar(150) NOT NULL,
   `sf_map_name` varchar(150) NOT NULL,
@@ -10,12 +10,11 @@ CREATE TABLE `sf_dataset_fields` (
   `updated` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `object` int unsigned NOT NULL,
   `alias_name` varchar(500) NOT NULL,
-  `join_type` varchar(100) DEFAULT NULL,
-  `join_table` varchar(500) DEFAULT NULL,
-  `join_parent_column` varchar(500) DEFAULT NULL,
-  `join_target_column` varchar(500) DEFAULT NULL,
+  `send_to_sf` TINYINT NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `UNQ_DATA_FIELDS` (`campaign_id`,`table_name`,`name`,`object`),
+  UNIQUE KEY `UNQ_DATA_FIELDS` (`campaign_id`,`table_id`,`name`,`object`),
   KEY `FK_OBJECT` (`object`),
-  CONSTRAINT `FK_OBJECT` FOREIGN KEY (`object`) REFERENCES `sf_dataset_objects` (`id`)
+  KEY `FK_TABLE` (`table_id`),
+  CONSTRAINT `FK_OBJECT` FOREIGN KEY (`object`) REFERENCES `sf_dataset_objects` (`id`),
+  CONSTRAINT `FK_TABLE` FOREIGN KEY (`table_id`) REFERENCES `sf_dataset_tables` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8;

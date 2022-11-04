@@ -1,0 +1,20 @@
+CREATE TABLE `sf_dataset_tables_relation` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `parent_table_id` int unsigned NOT NULL,
+  `target_table_id` int unsigned NOT NULL,
+  `relation` varchar(200) NOT NULL,
+  `on_parent` int unsigned NOT NULL,
+  `on_target` int unsigned NOT NULL,
+  `additional_join_condition` varchar(500) NOT NULL,
+   `campaign_id` int DEFAULT NULL,
+  `created` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `UNQ_TABLE_FIELDS` (`parent_table_id`,`target_table_id`,`relation`),
+  KEY `FK_PARENT_FIELD` (`on_parent`),
+  KEY `FK_TARGET_TABLE` (`target_table_id`),
+  CONSTRAINT `FK_PARENT_FIELD` FOREIGN KEY (`on_parent`) REFERENCES `sf_dataset_fields` (`id`),
+  CONSTRAINT `FK_PARENT_TABLE` FOREIGN KEY (`parent_table_id`) REFERENCES `sf_dataset_tables` (`id`),
+  CONSTRAINT `FK_TARGET_FIELD` FOREIGN KEY (`target_table_id`) REFERENCES `sf_dataset_fields` (`id`),
+  CONSTRAINT `FK_TARGET_TABLE` FOREIGN KEY (`target_table_id`) REFERENCES `sf_dataset_tables` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;

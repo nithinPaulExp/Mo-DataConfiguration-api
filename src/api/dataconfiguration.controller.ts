@@ -27,6 +27,70 @@ export const getObjects = async (req: Request, res: Response) => {
   return res.status(200).json(configurations);
 };
 
+export const getTables = async (req: Request, res: Response) => {
+  const campaignId = req.params['campaignId'];
+  const object = req.query['object'];
+  const configurations = await dataConfigurationBLL.getTables(campaignId,object);
+  if (configurations == null){
+    return res.status(400).json({error:"Something went wrong, No Configuration found"});
+  }
+  return res.status(200).json(configurations);
+};
+
+export const getConditions = async (req: Request, res: Response) => {
+  const campaignId = req.params['campaignId'];
+  const object = req.query['object'];
+  if (object == null){
+    return res.status(400).json({error:"object is missing"});
+  }
+  const conditions = await dataConfigurationBLL.getConditions(campaignId,object);
+  if (conditions == null){
+    return res.status(400).json({error:"Something went wrong, No Configuration found"});
+  }
+  return res.status(200).json(conditions);
+};
+
+export const generateData = async (req: Request, res: Response) => {
+  const campaignId = req.params['campaignId'];
+  const object = req.query['object'];
+  const request = req.body;
+  if (object == null){
+    return res.status(400).json({error:"object is missing"});
+  }
+  const data = await dataConfigurationBLL.generateData(campaignId,object,request);
+  if (data == null){
+    return res.status(400).json({error:"Something went wrong, No Configuration found"});
+  }
+  if (data.errorMessage){
+    return res.status(200).json(data);
+  }
+  return res.status(200).json(data);
+};
+
+
+
+export const createOrUpdateTable = async (req: Request, res: Response) => {
+  const campaignId = req.params['campaignId'];
+  const dataSet = req.body;
+  const id = req.query['id'];
+  var response = await dataConfigurationBLL.createOrUpdateTable(campaignId,dataSet,id)
+  if (response.errorMessage){
+    return res.status(400).json(response);
+  }
+  return res.status(200).json(response);
+};  
+
+export const deleteTable = async (req: Request, res: Response) => {
+  const id = req.params['id'];
+  if (id== null){
+    return res.status(200).json({errorMessage:"Table Id id is missing"});
+  }
+  var response = await dataConfigurationBLL.deleteTable(id)
+  if (response.errorMessage){
+    return res.status(200).json(response);
+  }
+  return res.status(200).json(response);
+}; 
 
 export const updateInitialConfiguration = async (req: Request, res: Response) => {
     const campaignId = req.params['campaignId'];

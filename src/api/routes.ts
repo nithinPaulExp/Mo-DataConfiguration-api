@@ -20,6 +20,32 @@ apiRouter.get(
   asyncErrHandler(dataConfigurationController.getObjects),
 );
 
+apiRouter.get(
+  '/dataconfiguration/tables/:campaignId?',
+  asyncErrHandler(dataConfigurationController.getTables),
+);
+apiRouter.get(
+  '/dataconfiguration/conditions/:campaignId?',
+  asyncErrHandler(dataConfigurationController.getConditions),
+);
+apiRouter.post(
+  '/dataconfiguration/generate/:campaignId?',
+  asyncErrHandler(dataConfigurationController.generateData),
+);
+
+
+
+apiRouter.post(
+  '/dataconfiguration/table/:campaignId?',
+  asyncErrHandler(dataConfigurationController.createOrUpdateTable),
+);
+
+apiRouter.delete(
+  '/dataconfiguration/table/:id?',
+  asyncErrHandler(dataConfigurationController.deleteTable),
+);
+
+
 apiRouter.post(
   '/dataconfiguration/createinitialconfigurations/:campaignId?',
   asyncErrHandler(dataConfigurationController.updateInitialConfiguration),

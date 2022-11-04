@@ -1,8 +1,10 @@
 import S3Helper from '../services/s3Client';
 import Campaigns from '../api-models/campaigns.api.model';
 import DataCofigurationDAL from '../dal/dataconfiguration.dal';
-const dataConfigurationDAL = new DataCofigurationDAL();
+import salesforceHelper from '../helpers/salesforce';
 
+const dataConfigurationDAL = new DataCofigurationDAL();
+const salesforce = new salesforceHelper();
 export default class DataCofigurationBLL {
   async getCampaigns(): Promise<any> {
     const campaigns = await dataConfigurationDAL.getCampaigns();
@@ -11,6 +13,10 @@ export default class DataCofigurationBLL {
 
   async getObjects(campaignId): Promise<any> {
     return await dataConfigurationDAL.getObjects(campaignId);
+  }
+
+  async getTables(campaignId,objectId): Promise<any> {
+    return await dataConfigurationDAL.getTables(campaignId,objectId);
   }
 
   async checkInitialConfigurationExists(campaignId,isSync): Promise<any> {
@@ -47,6 +53,76 @@ export default class DataCofigurationBLL {
     return await dataConfigurationDAL.createOrUpdateValidation(campaignId,obj,validationId);
       
   }
+
+  async createOrUpdateTable(campaignId,obj,tableId=null): Promise<any> {
+    return await dataConfigurationDAL.createOrUpdateTable(campaignId,obj,tableId);
+      
+  }
+
+  async getConditions(campaignId,objId): Promise<any> {
+    
+    return await dataConfigurationDAL.getConditions(campaignId,objId);
+      
+  }
+
+  async generateData(campaignId,objId,request): Promise<any> {
+    var data =  await dataConfigurationDAL.generateData(campaignId,objId,request);
+    if (data.errorMessage){
+      return data;
+    }
+    var yields = data.result
+    var sendToSF =request.is_send?true:false
+    if (sendToSF){
+      //establish salesforce connection
+      var objects =  await dataConfigurationDAL.getObjects(campaignId);
+      var obj = objects.find(x=>x.id === parseInt(objId));
+      try 
+      {
+        var payload = {
+          [obj.key_field] : yields
+        }
+          await salesforce.initialise(process.env.SalesforceUsername,process.env.SalesforcePassword,process.env.SalesforceSecurityToken,process.env.SalesforceLoginUri)
+          var conn = await salesforce.getConnection();
+          if(conn){
+             //console.log(connection)
+             var response = await salesforce.sendData(payload,obj.api_endpoint);
+             if(response.err){
+              return{
+                errorMessage:"Failed to push data"+response.err,
+                ...yields
+              }
+             }
+             else {
+              return{
+                success:response.response,
+                ...yields
+              }
+             }
+          } else {
+            return{
+              errorMessage:"Failed to establish connection with salesforce",
+              ...yields
+            }
+          }
+      }
+      catch(e){
+        return{
+          errorMessage:"Failed to send data to salesforce"+e,
+         ...yields
+        }
+      }
+    }
+
+    return yields;
+      
+  }
+
+  
+  async deleteTable(tableId): Promise<any> {
+    return await dataConfigurationDAL.deleteTable(tableId);
+      
+  }
+
   async getValidations(campaignId): Promise<any> {
     return await dataConfigurationDAL.getValidations(campaignId);
       
