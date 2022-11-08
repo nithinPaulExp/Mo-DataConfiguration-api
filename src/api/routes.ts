@@ -16,6 +16,21 @@ apiRouter.get(
 );
 
 apiRouter.get(
+  '/dataconfiguration/schema',
+  asyncErrHandler(dataConfigurationController.getDatabases),
+);
+
+apiRouter.get(
+  '/dataconfiguration/schema/:db',
+  asyncErrHandler(dataConfigurationController.getTablesFromDB),
+);
+
+apiRouter.get(
+  '/dataconfiguration/schema/:db/:table',
+  asyncErrHandler(dataConfigurationController.getColumsInTableFromDB),
+);
+
+apiRouter.get(
   '/dataconfiguration/objects/:campaignId?',
   asyncErrHandler(dataConfigurationController.getObjects),
 );
@@ -28,6 +43,15 @@ apiRouter.get(
   '/dataconfiguration/conditions/:campaignId?',
   asyncErrHandler(dataConfigurationController.getConditions),
 );
+apiRouter.post(
+  '/dataconfiguration/conditions/:campaignId?',
+  asyncErrHandler(dataConfigurationController.createOrUpdateConditions),
+);
+apiRouter.delete(
+  '/dataconfiguration/conditions/:id',
+  asyncErrHandler(dataConfigurationController.deleteCondition),
+);
+
 apiRouter.post(
   '/dataconfiguration/generate/:campaignId?',
   asyncErrHandler(dataConfigurationController.generateData),
@@ -105,6 +129,29 @@ apiRouter.delete(
   asyncErrHandler(dataConfigurationController.deleteField),
 );
 
+apiRouter.post(
+  '/dataconfiguration/object/:campaignId?',
+  asyncErrHandler(dataConfigurationController.createOrUpdateObjects),
+);
+
+apiRouter.get(
+  '/dataconfiguration/relation/:campaignId?',
+  asyncErrHandler(dataConfigurationController.getRelations),
+);
+
+apiRouter.post(
+  '/dataconfiguration/relation/:campaignId?',
+  asyncErrHandler(dataConfigurationController.createOrUpdateTableRelations),
+);
+apiRouter.delete(
+  '/dataconfiguration/relation/:id',
+  asyncErrHandler(dataConfigurationController.deleteTableRelations),
+);
+
+apiRouter.delete(
+  '/dataconfiguration/object/:id?',
+  asyncErrHandler(dataConfigurationController.deleteObject),
+);
 apiRouter.get('/dataconfiguration/campaigns', asyncErrHandler(dataConfigurationController.getCampaigns));
 
 export default apiRouter;

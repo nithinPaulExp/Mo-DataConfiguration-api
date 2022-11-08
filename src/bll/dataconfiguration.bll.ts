@@ -64,6 +64,20 @@ export default class DataCofigurationBLL {
     return await dataConfigurationDAL.getConditions(campaignId,objId);
       
   }
+  
+  async createOrUpdateCondition(campaignId,obj,id=null): Promise<any> {
+    return await dataConfigurationDAL.createOrUpdateConditions(campaignId,obj,id);
+      
+  }
+
+  async deleteCondition(condId): Promise<any> {
+    return await dataConfigurationDAL.deleteCondition(condId);      
+  }
+  
+  async getRelations(campaignId,objId): Promise<any> {
+    
+    return await dataConfigurationDAL.getRelations(campaignId,objId);      
+  }
 
   async generateData(campaignId,objId,request): Promise<any> {
     var data =  await dataConfigurationDAL.generateData(campaignId,objId,request);
@@ -89,31 +103,31 @@ export default class DataCofigurationBLL {
              if(response.err){
               return{
                 errorMessage:"Failed to push data"+response.err,
-                ...yields
+                data:yields
               }
              }
              else {
               return{
                 success:response.response,
-                ...yields
+                data:yields
               }
              }
           } else {
             return{
               errorMessage:"Failed to establish connection with salesforce",
-              ...yields
+              data:yields
             }
           }
       }
       catch(e){
         return{
           errorMessage:"Failed to send data to salesforce"+e,
-         ...yields
+          data:yields
         }
       }
     }
 
-    return yields;
+    return {data:yields};
       
   }
 
@@ -138,6 +152,11 @@ export default class DataCofigurationBLL {
     return await dataConfigurationDAL.createOrUpdateTransformation(campaignId,obj,transformationId);
       
   }
+
+  async createOrUpdateObject(campaignId,obj,objectId=null): Promise<any> {
+    return await dataConfigurationDAL.createOrUpdateObject(campaignId,obj,objectId);
+      
+  }
   async getTransformations(campaignId): Promise<any> {
     return await dataConfigurationDAL.getTransformations(campaignId);
       
@@ -149,18 +168,46 @@ export default class DataCofigurationBLL {
       
   }
 
+  async deleteObject(objectId): Promise<any> {
+    return await dataConfigurationDAL.deleteObject(objectId);
+      
+  }
+
   async createOrUpdateFields(campaignId,obj,fieldId=null): Promise<any> {
     return await dataConfigurationDAL.createOrUpdateFields(campaignId,obj,fieldId);
       
   }
-  async getFields(campaignId,object = null): Promise<any> {
-    return await dataConfigurationDAL.getFields(campaignId,object);
+
+  async createOrUpdateTableRelations(campaignId,obj,relationId=null): Promise<any> {
+    return await dataConfigurationDAL.createOrUpdateRelations(campaignId,obj,relationId);
+      
+  }
+
+  async getFields(campaignId,object = null,table = null): Promise<any> {
+    return await dataConfigurationDAL.getFields(campaignId,object,table);      
+  }
+
+  async getDatabases(): Promise<any> {
+    return await dataConfigurationDAL.getDbs();
+      
+  }
+  async getTablesFromDB(dbName): Promise<any> {
+    return await dataConfigurationDAL.getTablesFromDB(dbName);
+      
+  }
+  async getColumsInTableFromDB(dbName,tableName): Promise<any> {
+    return await dataConfigurationDAL.getColumsInTableFromDB(dbName,tableName);
       
   }
 
   
   async deleteField(fieldId): Promise<any> {
     return await dataConfigurationDAL.deleteField(fieldId);
+      
+  }
+
+  async deleteTableRelations(relationId): Promise<any> {
+    return await dataConfigurationDAL.deleteTableRelations(relationId);
       
   }
 

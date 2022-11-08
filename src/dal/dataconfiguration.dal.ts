@@ -14,6 +14,43 @@ export default class DataCofigurationDAL {
         return null;
     }
 
+    async getDbs() {
+      let con = await mysqlClient.getMysqlConnection(); 
+      let sql = `SELECT schema_name as name
+                FROM information_schema.schemata  
+                WHERE schema_name LIKE 'mov%' AND schema_name NOT LIKE '%live_%';`;
+      const db = await con.promise().query(sql);          
+      if (db!= null && db.length >0 )
+      {
+        return db[0];
+      }
+      return null;
+  }
+
+  async getTablesFromDB(dbName) {
+    let con = await mysqlClient.getMysqlConnection(); 
+    let sql = `select table_name as name from information_schema.tables WHERE table_schema = '${dbName}'`;
+    const tables = await con.promise().query(sql);          
+    if (tables!= null && tables.length >0 )
+    {
+      return tables[0];
+    }
+    return null;
+}
+
+async getColumsInTableFromDB(dbName,tableName) {
+  let con = await mysqlClient.getMysqlConnection(); 
+  let sql = `select column_name as name from information_schema.columns where table_name = '${tableName}' AND table_schema = '${dbName}'`;
+  const columns = await con.promise().query(sql);          
+  if (columns!= null && columns.length >0 )
+  {
+    return columns[0];
+  }
+  return null;
+}
+
+
+
     async getDBNameFromCampaignId(campaignId){
       var dbName = "mov_movember_com_live";
       if (!campaignId){
@@ -905,6 +942,36 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
       }
     }
 
+    async createOrUpdateConditions(campaignId, obj, id){
+      if (!id){
+        if (!await this.createConditions(campaignId,[obj])){
+          return {
+            errorMessage: `Something went wrong!! Please try again.`
+          };
+        } else {
+          return {
+            success: true
+          };
+        }
+      }
+      else {
+        return await this.updateConditions(campaignId,obj,id);
+      }
+    }
+
+    async deleteCondition(conditionId) {     
+      var sql = `DELETE FROM sf_dataset_object_conditions WHERE id = ${conditionId}`; 
+      try {
+        let con = await mysqlClient.getMysqlConnection();
+        await con.promise().query(sql);        
+        return {success:true};
+      } catch (err) {
+          return {
+            errorMessage: `Something went wrong!! Please try again. \n\n error: ${err}`
+          }
+      }      
+    }
+
     async deleteTable(tableId){
       var sqlgetrelations = `Select * from sf_dataset_tables_relation where parent_table_id =${tableId} OR target_table_id= ${tableId} LIMIT 1`;
       try {
@@ -1044,6 +1111,92 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
       return true;
     }
 
+    async createOrUpdateObject(campaignId,obj,id = null ){
+      if (!id){
+        if (! await this.createObjects(campaignId,[obj])){
+          return {
+            errorMessage: `Something went wrong!! Please try again.`
+          };
+        } else {
+          return {
+            success: true
+          };
+        }
+      }
+      else {
+        if (! await this.updateObject(campaignId,obj,id)){
+          return {
+            errorMessage: `Something went wrong!! Please try again.`
+          };
+        } else {
+          return {
+            success: true
+          };
+        }
+      }
+    }
+
+    async createOrUpdateRelations(campaignId,obj,id = null ){
+      if (!id){
+        if (! await this.createTableRelations(campaignId,[obj]))
+        {
+          return {
+            errorMessage: `Something went wrong!! Please try again.`
+          };
+        } else {
+          return {
+            success: true
+          };
+        }
+      }
+      else {
+         return await this.updateTableRelations(campaignId,obj,id)
+      }
+    }
+
+    async deleteObject(objId) {
+      var sqlgetUsed = `Select * from sf_dataset_tables where object_id= ${objId} LIMIT 1`;
+      try {
+        let con = await mysqlClient.getMysqlConnection();
+        const tables:any = await con.promise().query(sqlgetUsed);
+
+        if (tables != null && tables.length >0 && tables[0].length >0)
+        {          
+            return {
+              errorMessage: `You need to remove all tables, relations, fields before deleting the object.`
+            };
+        }
+      } catch (err) {
+        return {
+          errorMessage: `Something went wrong!! Please try again. \n\n error: ${err}`
+        };
+      }
+      var sql = `DELETE FROM sf_dataset_objects WHERE id = ${objId}`; 
+      try {
+        let con = await mysqlClient.getMysqlConnection();
+        await con.promise().query(sql);        
+        return {success:true};
+      } catch (err) {
+          return {
+            errorMessage: `Something went wrong!! Please try again. \n\n error: ${err}`
+          }
+      }
+    }
+    
+    async updateObject(campaignId, obj, id){
+      var sql = `UPDATE sf_dataset_objects 
+                SET name=?,display_name=?,api_endpoint=?, sqs_topic_arn=?,key_field=?
+                WHERE campaign_id =? AND id=?`; 
+
+      let con = await mysqlClient.getMysqlConnection();
+      const data:any = await con.promise().query(sql,[`${obj.name}`,`${obj.display_name}`,`${obj.api_endpoint}`,`${obj.sqs_topic_arn}`,`${obj.key_field}`,campaignId, id]);
+
+      if (data[0] != null && data[0].affectedRows >0){
+        return true;
+      } else {
+        return false;
+      }
+    }
    async createDataSet(campaignId,obj) {
       var hasUpdated:boolean = false;
 
@@ -1183,6 +1336,87 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
       return true;
     }
 
+    async updateTableRelations(campaignId, relation,id){
+        var objects  = await this.getObjects(campaignId); 
+        var fieldObject = relation.object;
+        var isValidObject = objects.find(x=>x.id === fieldObject);
+        if (!isValidObject){
+          return {
+            errorMessage: `Invalid object selected.`            
+          }
+        }
+        
+        
+        var tables =  await this.getTables(campaignId,fieldObject);
+        var fieldParentTable=relation.parent_table;
+        
+          var isValidTable = tables.find(x=>x.id === parseInt(fieldParentTable));
+          if (!isValidTable){
+            return {
+              errorMessage: `Invalid parent table selection.`            
+            }
+          }
+         
+
+        var fieldTargetTable=relation.target_table;
+        
+        var isValidTable = tables.find(x=>x.id === parseInt(fieldTargetTable));
+        if (!isValidTable){
+          return {
+            errorMessage: `Invalid target table selection.`            
+          }
+        }
+         
+
+        var parentFields = await this.getFieldsByTable(campaignId,fieldParentTable);
+
+        var fieldParentField=relation.on_parent;        
+        var isValidTable = parentFields.find(x=>x.id === fieldParentField);
+        if (!isValidTable){
+          return {
+            errorMessage: `Invalid parent field selection.`            
+          }
+        }         
+
+        var targetFields = await this.getFieldsByTable(campaignId,fieldTargetTable);
+
+        var fieldTargetField=relation.on_target;
+        var isValidTable = targetFields.find(x=>x.id === fieldTargetField);
+        if (!isValidTable){
+          return {
+            errorMessage: `Invalid target field selection.`            
+          }
+        }
+          
+          
+        var sql = `UPDATE sf_dataset_tables_relation 
+                  SET parent_table_id = ?,
+                      target_table_id=?,
+                      relation=?,
+                      on_parent=?,
+                      on_target=?,
+                      additional_join_condition=?
+                      WHERE campaign_id=? AND id=?`; 
+        
+        
+        try {
+          let con = await mysqlClient.getMysqlConnection();
+          const data:any = await con.promise().query(sql,[`${fieldParentTable}`,`${fieldTargetTable}`,`${relation.relation}`,`${fieldParentField}`,`${fieldTargetField}`,`${relation.additional_join_condition}`,campaignId,id]);
+          if (data[0] != null && data[0].affectedRows >0){
+            return true;
+          }
+        }
+        catch (err) {
+          return {
+            errorMessage: `Something went wrong.${err}`            
+          }
+        }
+      
+      return{
+        success: true            
+      }
+    }
+
     async createConditions(campaignId, conditions){
       if (conditions.length >0){
         var objects  = await this.getObjects(campaignId);       
@@ -1257,6 +1491,54 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
       return true;
     }
 
+    async updateConditions(campaignId, condition,id){
+        var objects  = await this.getObjects(campaignId); 
+
+        var conditionObject = condition.object;
+        var isValidObject = objects.find(x=>x.id === conditionObject);
+        if (!isValidObject){
+          return {
+            errorMessage: `Invalid object selected.`            
+          }
+        }
+        
+        var tables =  await this.getTables(campaignId,conditionObject);
+        var conditionTable=condition.table;
+        var isValidTable = tables.find(x=>x.id === parseInt(conditionTable));
+        if (!isValidTable){
+          return {
+            errorMessage: `Invalid table selected.`            
+          }
+        }
+         
+
+        var fields = await this.getFieldsByTable(campaignId,conditionTable);
+
+        var conditionField=condition.field;        
+        var isValidTable = fields.find(x=>x.id === conditionField);
+        if (!isValidTable){
+          return {
+            errorMessage: `Invalid field selected.`            
+          }
+        }
+         
+        var sql = `UPDATE sf_dataset_object_conditions SET name=?,object_id=?,table_id=?,where_field=?,where_clause=?
+                  WHERE campaign_id = ? AND id=?`; 
+        
+        try {
+          let con = await mysqlClient.getMysqlConnection();
+          const data:any = await con.promise().query(sql,[`${condition.name}`,`${conditionObject}`,`${conditionTable}`,`${conditionField}`,`${condition.where_clause}`,campaignId,id]);
+          if (data[0] != null && data[0].affectedRows >0){
+            return true;
+          }
+        }
+        catch (err) {
+          return false;
+        }
+      
+      return true;
+    }
+
     async createObjects(campaignId, objects){
 
       if (objects.length >0){
@@ -1282,15 +1564,19 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
       return true;
     }
 
-    async getFields(campaignId,object): Promise<Array<any> > {
+    async getFields(campaignId,object,table=null): Promise<Array<any> > {
       var dataset:any = await this.getDataSet(campaignId,false);
+      var fields = dataset.fields;
       if(dataset){
         if (object && dataset.fields){
-          return dataset.fields.filter(x=>x.object === parseInt(object));
+          fields =  dataset.fields.filter(x=>x.object === parseInt(object));
         }
-        return dataset.fields;
+        if (table && dataset.fields){
+          fields =  dataset.fields.filter(x=>x.field_table === parseInt(table));
+        }
+        return fields;
       }
-      return dataset;
+      return fields;
     }
 
     async deleteField(fieldId, deleteField = true) {      
@@ -1305,6 +1591,18 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
           errorMessage: `Something went wrong!! Please try again. \n\n error: ${err}`
         };
       }
+    }
+    async deleteTableRelations(relationId) {     
+      var sql = `DELETE FROM sf_dataset_tables_relation WHERE id = ${relationId}`; 
+      try {
+        let con = await mysqlClient.getMysqlConnection();
+        await con.promise().query(sql);        
+        return {success:true};
+      } catch (err) {
+          return {
+            errorMessage: `Something went wrong!! Please try again. \n\n error: ${err}`
+          }
+      }      
     }
 
     async getDataSet(campaignId, trimIds = true): Promise<Array<any> > {
