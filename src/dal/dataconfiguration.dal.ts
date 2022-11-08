@@ -1,5 +1,6 @@
 import CampaignDM from '../models/campaignDM.model';
 import mysqlClient from '../services/mysqlclient';
+import Validators from '../helpers/validators';
 
 export default class DataCofigurationDAL {
     async getCampaigns(): Promise<Array<CampaignDM> > {
@@ -97,6 +98,8 @@ async getColumsInTableFromDB(dbName,tableName) {
       var fromstring;
       
       var parentTableIds=[];
+      var validations=[];
+      var transformations=[]
       for(let i=0;i<fields.length;i++){
         var field = fields[i];
         if (!field.send_to_sf)
@@ -109,6 +112,15 @@ async getColumsInTableFromDB(dbName,tableName) {
           fromstring = ` FROM ${dbName}.${table.name} ${table.alias}`
           parentTableIds.push(table.id);
         }
+        if (field.validations && field.validations.length >0)
+        {
+          validations.push({field:field.default_sf_map_name,validations:field.validations});
+        }
+        if (field.transforms && field.transforms.length >0)
+        {
+          transformations.push({field:field.default_sf_map_name,transformations:field.transforms});
+        }
+
         fieldsList.push( `${table.alias}.${field.name} ${field.alias_name?"AS "+field.default_sf_map_name:''}`);
       } 
 
@@ -184,17 +196,66 @@ async getColumsInTableFromDB(dbName,tableName) {
       try
       {
         let con = await mysqlClient.getMysqlConnection(); 
-      const objects = await con.promise().query(query);          
-      if (objects!= null && objects.length >0 )
-      {
-        return {result:objects[0]}
+        const objects:any  = await con.promise().query(query);          
+        if (objects!= null && objects.length >0 )
+        {
+          var errors=[];
+          let resultSet = objects[0];
+          if (resultSet)
+          {
+            if (resultSet.length >0 && (validations.length>0 || transformations.length>0))
+            {
+              var validatorHelper = new Validators();
+              for(let i=0;i<resultSet.length; i++){
+                var data = resultSet[i];
+                for (var key of Object.keys(data)) {
+                  var errorArr = [];
+                  if(validations.length>0){
+                    var validators = validations.find(x=>x.field === key);
+                    if (validators && validators.validations && validators.validations.length >0){
+                      for(let j=0;j<validators.validations.length;j++){
+                        var validator = validators.validations[j];
+                        if (typeof validatorHelper[validator.method] == 'function') { 
+                          var resp =  await validatorHelper[validator.method](data[key],validator.required_params);
+                          if (resp.error) {
+                            errorArr.push({field:key,error:resp.error});
+                          }
+                        }                        
+                      }
+                      
+                    }
+                  }
+                  if(transformations.length>0){
+                    var transformers = transformations.find(x=>x.field === key);
+                    if (transformers && transformers.transformations && transformers.transformations.length >0){
+                      for(let j=0;j<transformers.transformations.length;j++){
+                        var transformer = transformers.transformations[j];
+                        if (typeof validatorHelper[transformer.method] == 'function') { 
+                          validatorHelper[transformer.method](data[key],transformer.required_params); 
+                        }
+                        
+                      }
+                      
+                    }
+                  }
+                  if (errorArr && errorArr.length >0){
+                    errors.push({key:i,errors:errorArr});
+                  }
+                }
+              }
+            }
+          }
+          if (errors&&errors.length>0){
+            return {result:objects[0], errors:errors}
+          }
+          return {result:objects[0]}
+        }
       }
-    }
-    catch(err){
-      return {
-        errorMessage: `error in executing the query,${err}`
-      };
-    }
+      catch(err){
+        return {
+          errorMessage: `error in executing the query,${err}`
+        };
+      }
 
     }
 
@@ -306,7 +367,7 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
         {
           let validatorRec = validator[0][0];
           if (validatorRec.type != validation.type){
-            var sqlGetFields = `Select sfdf.id,sfdf.name, sfdf.table_name from sf_dataset_fields sfdf 
+            var sqlGetFields = `Select sfdf.id,sfdf.name from sf_dataset_fields sfdf 
                                 inner join sf_dataset_fields_validations sfdfv
                                 on sfdf.id = sfdfv.field_id
                                 WHERE sfdfv.validation_id = ${validationId}`
@@ -318,7 +379,7 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
               {
                 var fieldString = "<ul>";
                 for(let i=0;i<fieldsRecrds.length; i++){
-                  fieldString += "<li key='"+fieldsRecrds[i].id+"'>"+fieldsRecrds[i].name+" - <b>"+fieldsRecrds[i].table_name +' - '+fieldsRecrds[i].object+"</b></li>";
+                  fieldString += "<li key='"+fieldsRecrds[i].id+"'>"+fieldsRecrds[i].name+" - <b>"+fieldsRecrds[i].object+"</b></li>";
                 }
                 fieldString += "</ul>";
                 return {
@@ -355,7 +416,7 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
 
         if (validator != null && validator.length >0 && validator[0].length >0)
         {
-          var sqlGetFields = `Select sfdf.id,sfdf.name, sfdf.table_name from sf_dataset_fields sfdf 
+          var sqlGetFields = `Select sfdf.id,sfdf.name from sf_dataset_fields sfdf 
                               inner join sf_dataset_fields_validations sfdfv
                               on sfdf.id = sfdfv.field_id
                               WHERE sfdfv.validation_id = ${validationId}`
@@ -367,12 +428,12 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
             {
               var fieldString = "<ul>";
               for(let i=0;i<fieldsRecrds.length; i++){
-                fieldString += "<li key ='"+fieldsRecrds[i].id+"'>"+fieldsRecrds[i].name+" - <b>"+fieldsRecrds[i].table_name +' - '+fieldsRecrds[i].object+"</b></li>";
+                fieldString += "<li key ='"+fieldsRecrds[i].id+"'>"+fieldsRecrds[i].name+" - <b>"+fieldsRecrds[i].object+"</b></li>";
               }
               fieldString += "</ul>";
               return {
                 errorMessage: `You need to remove validations from the fields to delete the validation.<br/>
-                              <b>Fields are (Field Name - Table Name - Object)</b> <br/>${fieldString}`
+                              <b>Fields are (Field Name - Object)</b> <br/>${fieldString}`
               };
             }
           }
@@ -416,7 +477,7 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
 
         if (transformations != null && transformations.length >0 && transformations[0].length >0)
         {
-          var sqlGetFields = `Select  sfdf.id ,sfdf.name, sfdf.table_name from sf_dataset_fields sfdf 
+          var sqlGetFields = `Select  sfdf.id ,sfdf.name from sf_dataset_fields sfdf 
                               inner join sf_dataset_fields_transformations sfdft
                               on sfdf.id = sfdft.field_id
                               WHERE sfdft.transformation_id = ${transformationId}`
@@ -429,7 +490,7 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
             {
               var fieldString = "<ul>";
               for(let i=0;i<fieldsRecrds.length; i++){
-                fieldString += "<li key="+fieldsRecrds[i].id+"'>"+fieldsRecrds[i].name+" - <b>"+fieldsRecrds[i].table_name +' - '+fieldsRecrds[i].object+"</b></li>";
+                fieldString += "<li key="+fieldsRecrds[i].id+"'>"+fieldsRecrds[i].name+" - <b>"+fieldsRecrds[i].object+"</b></li>";
               }
               fieldString += "</ul>";
               return {
@@ -1012,12 +1073,12 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
             {
               var fieldString = "<ul>";
               for(let i=0;i<fieldsRecrds.length; i++){
-                fieldString += "<li key='"+fieldsRecrds[i].id+"'>"+fieldsRecrds[i].name+" - <b>"+fieldsRecrds[i].table_name +' - '+fieldsRecrds[i].object+"</b></li>";
+                fieldString += "<li key='"+fieldsRecrds[i].id+"'>"+fieldsRecrds[i].name+" - <b>"+fieldsRecrds[i].object+"</b></li>";
               }
               fieldString += "</ul>";
               return {
                 errorMessage: `You need to remove validations from the fields to update the type.<br/>
-                              <b>Fields are (Field Name - Table Name - Object)</b> <br/>${fieldString}`
+                              <b>Fields are (Field Name - Object)</b> <br/>${fieldString}`
               };
             }
           }

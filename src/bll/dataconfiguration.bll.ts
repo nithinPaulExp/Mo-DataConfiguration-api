@@ -1,10 +1,10 @@
 import S3Helper from '../services/s3Client';
 import Campaigns from '../api-models/campaigns.api.model';
 import DataCofigurationDAL from '../dal/dataconfiguration.dal';
-import salesforceHelper from '../helpers/salesforce';
+import SalesforceHelper from '../helpers/salesforce';
 
 const dataConfigurationDAL = new DataCofigurationDAL();
-const salesforce = new salesforceHelper();
+const salesforce = new SalesforceHelper();
 export default class DataCofigurationBLL {
   async getCampaigns(): Promise<any> {
     const campaigns = await dataConfigurationDAL.getCampaigns();
@@ -73,7 +73,7 @@ export default class DataCofigurationBLL {
   async deleteCondition(condId): Promise<any> {
     return await dataConfigurationDAL.deleteCondition(condId);      
   }
-  
+
   async getRelations(campaignId,objId): Promise<any> {
     
     return await dataConfigurationDAL.getRelations(campaignId,objId);      
@@ -81,8 +81,14 @@ export default class DataCofigurationBLL {
 
   async generateData(campaignId,objId,request): Promise<any> {
     var data =  await dataConfigurationDAL.generateData(campaignId,objId,request);
-    if (data.errorMessage){
-      return data;
+    if (data.errorMessage || data.errors){
+      if (data.errors){
+        return{
+          errorMessage:"Validation errors occured",
+          data:data.result,
+          errors:data.errors
+        }
+      }
     }
     var yields = data.result
     var sendToSF =request.is_send?true:false

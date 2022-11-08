@@ -1,6 +1,6 @@
 var jsforce = require('jsforce');
 var moment = require("moment-timezone");
-export default  class salesforceHelper {
+export default  class SalesforceHelper {
     authConfig = null;
     connection = new jsforce.Connection();
     tokenValid = false;
