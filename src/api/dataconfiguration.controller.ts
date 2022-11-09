@@ -13,13 +13,15 @@ export const getDatabases = async (req: Request, res: Response) => {
 };
 export const getTablesFromDB = async (req: Request, res: Response) => {
   const dbName = req.params['db'];
-  const campaigns = await dataConfigurationBLL.getTablesFromDB(dbName);
+  const campaignId = req.params['campaignId'];
+  const campaigns = await dataConfigurationBLL.getTablesFromDB(dbName,campaignId);
   return res.status(200).json(campaigns);
 };
 export const getColumsInTableFromDB = async (req: Request, res: Response) => {
   const dbName = req.params['db'];
   const tableName = req.params['table'];
-  const campaigns = await dataConfigurationBLL.getColumsInTableFromDB(dbName,tableName);
+  const campaignId = req.params['campaignId'];
+  const campaigns = await dataConfigurationBLL.getColumsInTableFromDB(dbName,tableName,campaignId);
   return res.status(200).json(campaigns);
 };
 
@@ -302,6 +304,21 @@ export const updateInitialConfiguration = async (req: Request, res: Response) =>
     return res.status(200).json(response);
   };
 
+  export const getCredential = async (req: Request, res: Response) => {    
+    var response = await dataConfigurationBLL.getCredential()
+    if (response.errorMessage){
+      return res.status(200).json(response);
+    }
+    return res.status(200).json(response);
+  };
+  export const saveCredential = async (req: Request, res: Response) => {
+    const dataSet = req.body;
+    var response = await dataConfigurationBLL.saveCredential(dataSet)
+    if (response.errorMessage){
+      return res.status(200).json(response);
+    }
+    return res.status(200).json(response);
+  }; 
   export const updateField = async (req: Request, res: Response) => {
     const campaignId = req.params['campaignId'];
     const dataSet = req.body;

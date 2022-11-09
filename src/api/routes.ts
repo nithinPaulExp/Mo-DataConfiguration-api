@@ -21,12 +21,12 @@ apiRouter.get(
 );
 
 apiRouter.get(
-  '/dataconfiguration/schema/:db',
+  '/dataconfiguration/schema/:db/:campaignId?',
   asyncErrHandler(dataConfigurationController.getTablesFromDB),
 );
 
 apiRouter.get(
-  '/dataconfiguration/schema/:db/:table',
+  '/dataconfiguration/schema/:db/:table/:campaignId?',
   asyncErrHandler(dataConfigurationController.getColumsInTableFromDB),
 );
 
@@ -55,6 +55,14 @@ apiRouter.delete(
 apiRouter.post(
   '/dataconfiguration/generate/:campaignId?',
   asyncErrHandler(dataConfigurationController.generateData),
+);
+apiRouter.post(
+  '/dataconfiguration/credential',
+  asyncErrHandler(dataConfigurationController.saveCredential),
+);
+apiRouter.get(
+  '/dataconfiguration/credential',
+  asyncErrHandler(dataConfigurationController.getCredential),
 );
 
 

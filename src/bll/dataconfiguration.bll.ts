@@ -74,6 +74,14 @@ export default class DataCofigurationBLL {
     return await dataConfigurationDAL.deleteCondition(condId);      
   }
 
+  async getCredential(): Promise<any> {
+    return await dataConfigurationDAL.getCredential();      
+  }
+
+  async saveCredential(obj): Promise<any> {
+    return await dataConfigurationDAL.saveCredential(obj);      
+  }
+
   async getRelations(campaignId,objId): Promise<any> {
     
     return await dataConfigurationDAL.getRelations(campaignId,objId);      
@@ -101,29 +109,36 @@ export default class DataCofigurationBLL {
         var payload = {
           [obj.key_field] : yields
         }
-          await salesforce.initialise(process.env.SalesforceUsername,process.env.SalesforcePassword,process.env.SalesforceSecurityToken,process.env.SalesforceLoginUri)
-          var conn = await salesforce.getConnection();
-          if(conn){
-             //console.log(connection)
-             var response = await salesforce.sendData(payload,obj.api_endpoint);
-             if(response.err){
-              return{
-                errorMessage:"Failed to push data"+response.err,
-                data:yields
-              }
-             }
-             else {
-              return{
-                success:response.response,
-                data:yields
-              }
-             }
-          } else {
+        var cred:any = await dataConfigurationDAL.getCredential();
+        if (!cred || cred[0]==null){
+          return{
+            errorMessage:"Failed to push data. No credentials found",
+            data:yields
+          }
+        }
+        await salesforce.initialise(cred[0].user_name,cred[0].password,cred[0].token,cred[0].login_url)
+        var conn = await salesforce.getConnection();
+        if(conn){
+            //console.log(connection)
+            var response = await salesforce.sendData(payload,obj.api_endpoint);
+            if(response.err){
             return{
-              errorMessage:"Failed to establish connection with salesforce",
+              errorMessage:"Failed to push data"+response.err,
               data:yields
             }
+            }
+            else {
+            return{
+              success:response.response,
+              data:yields
+            }
+            }
+        } else {
+          return{
+            errorMessage:"Failed to establish connection with salesforce",
+            data:yields
           }
+        }
       }
       catch(e){
         return{
@@ -197,12 +212,12 @@ export default class DataCofigurationBLL {
     return await dataConfigurationDAL.getDbs();
       
   }
-  async getTablesFromDB(dbName): Promise<any> {
-    return await dataConfigurationDAL.getTablesFromDB(dbName);
+  async getTablesFromDB(dbName,campaignId): Promise<any> {
+    return await dataConfigurationDAL.getTablesFromDB(dbName,campaignId);
       
   }
-  async getColumsInTableFromDB(dbName,tableName): Promise<any> {
-    return await dataConfigurationDAL.getColumsInTableFromDB(dbName,tableName);
+  async getColumsInTableFromDB(dbName,tableName,campaignId): Promise<any> {
+    return await dataConfigurationDAL.getColumsInTableFromDB(dbName,tableName,campaignId);
       
   }
 

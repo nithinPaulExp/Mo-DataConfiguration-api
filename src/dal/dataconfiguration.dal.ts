@@ -1,6 +1,7 @@
 import CampaignDM from '../models/campaignDM.model';
 import mysqlClient from '../services/mysqlclient';
 import Validators from '../helpers/validators';
+import Transformers from '../helpers/transformer';
 
 export default class DataCofigurationDAL {
     async getCampaigns(): Promise<Array<CampaignDM> > {
@@ -13,6 +14,59 @@ export default class DataCofigurationDAL {
         return campaignData
         }
         return null;
+    }
+
+    async getCredential(): Promise<Array<CampaignDM> > {
+      let con = await mysqlClient.getMysqlConnection(); 
+      let sql = `select * from sf_credentials`;
+      const cred:any = await con.promise().query(sql);          
+      if (cred!= null && cred.length >0 )
+      {
+        return cred[0];
+      }
+      return null;
+    }
+
+    async saveCredential(obj) {
+      let con = await mysqlClient.getMysqlConnection(); 
+      let sqlGet = `select * from sf_credentials LIMIT 1`;
+      const cred:any = await con.promise().query(sqlGet); 
+      if (cred != null && cred.length >0 && cred[0][0] != null)
+      {
+        let credRec = cred[0][0];
+        var sql = "UPDATE sf_credentials SET user_name=?,password=?,token=?, login_url=? WHERE id=?"; 
+        try {
+          let con = await mysqlClient.getMysqlConnection();
+          const data:any = await con.promise().query(sql,[obj.user_name,obj.password,obj.token,obj.login_url,credRec.id]);
+          if (data[0] != null && data[0].affectedRows >0){
+            return {
+              success: `true`
+            };
+          }
+        }
+        catch(err){
+          return {
+            errorMessage: `error in executing the query,${err}`
+          };
+        }
+      } 
+      else {
+        var sql = "INSERT INTO sf_credentials (user_name,password,token, login_url) VALUES (?,?,?,?)"; 
+        try {
+          let con = await mysqlClient.getMysqlConnection();
+          const data:any = await con.promise().query(sql,[obj.user_name,obj.password,obj.token,obj.login_url]);
+          if (data[0] != null && data[0].affectedRows >0){
+            return {
+              success: `true`
+            };
+          }
+        }
+        catch(err){
+          return {
+            errorMessage: `error in executing the query,${err}`
+          };
+        }
+      }
     }
 
     async getDbs() {
@@ -28,9 +82,10 @@ export default class DataCofigurationDAL {
       return null;
   }
 
-  async getTablesFromDB(dbName) {
+  async getTablesFromDB(dbName,campaignId) {
+    var db = (dbName === 'mov_movember_com_live')?await this.getDBNameFromCampaignId(campaignId):dbName;
     let con = await mysqlClient.getMysqlConnection(); 
-    let sql = `select table_name as name from information_schema.tables WHERE table_schema = '${dbName}'`;
+    let sql = `select table_name as name from information_schema.tables WHERE table_schema = '${db}'`;
     const tables = await con.promise().query(sql);          
     if (tables!= null && tables.length >0 )
     {
@@ -39,9 +94,12 @@ export default class DataCofigurationDAL {
     return null;
 }
 
-async getColumsInTableFromDB(dbName,tableName) {
+async getColumsInTableFromDB(dbName,tableName,campaignId) {
+  var db = (dbName === 'mov_movember_com_live')?await this.getDBNameFromCampaignId(campaignId):dbName;
+    
   let con = await mysqlClient.getMysqlConnection(); 
-  let sql = `select column_name as name from information_schema.columns where table_name = '${tableName}' AND table_schema = '${dbName}'`;
+
+  let sql = `select column_name as name from information_schema.columns where table_name = '${tableName}' AND table_schema = '${db}'`;
   const columns = await con.promise().query(sql);          
   if (columns!= null && columns.length >0 )
   {
@@ -59,7 +117,7 @@ async getColumsInTableFromDB(dbName,tableName) {
       }
       else {
         var campaigns = await this.getCampaigns();
-        var thisCampaign = campaigns.find(x=>x.id === campaignId);
+        var thisCampaign = campaigns.find(x=>x.id === parseInt(campaignId));
         const campaignYear = thisCampaign?thisCampaign.short_title:null;
         if (thisCampaign !=null && campaignYear != null && campaignYear != null && !thisCampaign.isCurrentCampaign){
           dbName = dbName+ "_" + campaignYear;
@@ -104,7 +162,7 @@ async getColumsInTableFromDB(dbName,tableName) {
         var field = fields[i];
         if (!field.send_to_sf)
           continue;
-        var table = tables.find(x=>x.id === field.table);
+        var table = tables.find(x=>x.id === parseInt(field.table));
         if (!table)
           continue;
         if (i===0){
@@ -137,7 +195,7 @@ async getColumsInTableFromDB(dbName,tableName) {
         joinParentTables = [];
         for(let i=0;i< parentTableIds.length;i++){
           var parentTableId = parentTableIds[i];
-          var joinTables = relations.filter(x=>x.parent_table.id === parentTableId);
+          var joinTables = relations.filter(x=>x.parent_table.id === parseInt(parentTableId));
           for(let j=0;j<joinTables.length;j++){
             var relationRec = joinTables[j];
             var joinCondition = relationRec.additional_join_condition;
@@ -145,7 +203,7 @@ async getColumsInTableFromDB(dbName,tableName) {
               joinCondition = joinCondition.replace("CURRENT_CAMPAIGN",campaignId);
               joinCondition = joinCondition.replace("PREVIOUS_CAMPAIGN",previousCampaignId);
             }
-            var targetTable = tables.find(x=>x.id===relationRec.target_table.id);
+            var targetTable = tables.find(x=>x.id===parseInt(relationRec.target_table.id));
             var dbName = `${(!targetTable.db || targetTable.db === 'mov_movember_com_live')?await this.getDBNameFromCampaignId(campaignId):targetTable.db}`;
           
             var relQuery = `${relationRec.relation}
@@ -169,14 +227,14 @@ async getColumsInTableFromDB(dbName,tableName) {
         var conditions = await this.getConditions(campaignId,object);
         for(let i=0;i<conditions.length;i++){
           var condition = conditions[i];
-          var givenCondition = reqConditions.find(x=>x.id === condition.id);
+          var givenCondition = reqConditions.find(x=>x.id === parseInt(condition.id));
           if (!givenCondition.value){
             conditionError += `<b>${condition.name}</b> is not provided.<br/>`
           }
           var clause = condition.where_clause.replace('?',givenCondition.value)
          
-          var table = tables.find(x=>x.id===condition.table.id);
-          var field = fields.find(x=>x.id===condition.field.id);
+          var table = tables.find(x=>x.id===parseInt(condition.table.id));
+          var field = fields.find(x=>x.id===parseInt(condition.field.id));
           conditionQuery.push( 
             `${table.alias}.${field.name} ${clause}`
           )
@@ -206,6 +264,7 @@ async getColumsInTableFromDB(dbName,tableName) {
             if (resultSet.length >0 && (validations.length>0 || transformations.length>0))
             {
               var validatorHelper = new Validators();
+              var transformHelper = new Transformers();
               for(let i=0;i<resultSet.length; i++){
                 var data = resultSet[i];
                 for (var key of Object.keys(data)) {
@@ -230,8 +289,8 @@ async getColumsInTableFromDB(dbName,tableName) {
                     if (transformers && transformers.transformations && transformers.transformations.length >0){
                       for(let j=0;j<transformers.transformations.length;j++){
                         var transformer = transformers.transformations[j];
-                        if (typeof validatorHelper[transformer.method] == 'function') { 
-                          validatorHelper[transformer.method](data[key],transformer.required_params); 
+                        if (typeof transformHelper[transformer.method] == 'function') { 
+                          data[key] = await transformHelper[transformer.method](data[key]); 
                         }
                         
                       }
@@ -773,7 +832,7 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
           fieldObject = object.id;
         }
         else {
-          var isValidObject = objects.find(x=>x.id === fieldObject);
+          var isValidObject = objects.find(x=>x.id === parseInt(fieldObject));
           if (!isValidObject){
             return false;
           }
@@ -1151,7 +1210,7 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
              fieldObject = object.id;
            }
            else {
-             var isValidObject = objects.find(x=>x.id === fieldObject);
+             var isValidObject = objects.find(x=>x.id === parseInt(fieldObject));
              if (!isValidObject){
                return false;
              }
@@ -1311,7 +1370,7 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
           fieldObject = object.id;
         }
         else {
-          var isValidObject = objects.find(x=>x.id === fieldObject);
+          var isValidObject = objects.find(x=>x.id === parseInt(fieldObject));
           if (!isValidObject){
             return false;
           }
@@ -1359,7 +1418,7 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
            fieldParentField = field.id;
          }
          else {
-           var isValidTable = parentFields.find(x=>x.id === fieldParentField);
+           var isValidTable = parentFields.find(x=>x.id === parseInt(fieldParentField));
            if (!isValidTable){
              return false;
            }
@@ -1376,7 +1435,7 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
            fieldTargetField = field.id;
           }
           else {
-           var isValidTable = targetFields.find(x=>x.id === fieldTargetField);
+           var isValidTable = targetFields.find(x=>x.id === parseInt(fieldTargetField));
            if (!isValidTable){
              return false;
            }
@@ -1400,7 +1459,7 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
     async updateTableRelations(campaignId, relation,id){
         var objects  = await this.getObjects(campaignId); 
         var fieldObject = relation.object;
-        var isValidObject = objects.find(x=>x.id === fieldObject);
+        var isValidObject = objects.find(x=>x.id === parseInt(fieldObject));
         if (!isValidObject){
           return {
             errorMessage: `Invalid object selected.`            
@@ -1432,7 +1491,7 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
         var parentFields = await this.getFieldsByTable(campaignId,fieldParentTable);
 
         var fieldParentField=relation.on_parent;        
-        var isValidTable = parentFields.find(x=>x.id === fieldParentField);
+        var isValidTable = parentFields.find(x=>x.id === parseInt(fieldParentField));
         if (!isValidTable){
           return {
             errorMessage: `Invalid parent field selection.`            
@@ -1442,7 +1501,7 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
         var targetFields = await this.getFieldsByTable(campaignId,fieldTargetTable);
 
         var fieldTargetField=relation.on_target;
-        var isValidTable = targetFields.find(x=>x.id === fieldTargetField);
+        var isValidTable = targetFields.find(x=>x.id === parseInt(fieldTargetField));
         if (!isValidTable){
           return {
             errorMessage: `Invalid target field selection.`            
@@ -1497,7 +1556,7 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
           conditionObject = object.id;
         }
         else {
-          var isValidObject = objects.find(x=>x.id === conditionObject);
+          var isValidObject = objects.find(x=>x.id === parseInt(conditionObject));
           if (!isValidObject){
             return false;
           }
@@ -1530,7 +1589,7 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
            conditionField = field.id;
          }
          else {
-           var isValidTable = fields.find(x=>x.id === conditionField);
+           var isValidTable = fields.find(x=>x.id === parseInt(conditionField));
            if (!isValidTable){
              return false;
            }
@@ -1556,7 +1615,7 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
         var objects  = await this.getObjects(campaignId); 
 
         var conditionObject = condition.object;
-        var isValidObject = objects.find(x=>x.id === conditionObject);
+        var isValidObject = objects.find(x=>x.id === parseInt(conditionObject));
         if (!isValidObject){
           return {
             errorMessage: `Invalid object selected.`            
@@ -1576,7 +1635,7 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
         var fields = await this.getFieldsByTable(campaignId,conditionTable);
 
         var conditionField=condition.field;        
-        var isValidTable = fields.find(x=>x.id === conditionField);
+        var isValidTable = fields.find(x=>x.id === parseInt(conditionField));
         if (!isValidTable){
           return {
             errorMessage: `Invalid field selected.`            
