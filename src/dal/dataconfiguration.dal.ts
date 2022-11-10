@@ -160,16 +160,16 @@ async getColumsInTableFromDB(dbName,tableName,campaignId) {
       var transformations=[]
       for(let i=0;i<fields.length;i++){
         var field = fields[i];
-        if (!field.send_to_sf)
-          continue;
         var table = tables.find(x=>x.id === parseInt(field.table));
         if (!table)
           continue;
-        if (i===0){
+        if (table.is_main_table === 1 && parentTableIds.indexOf(table.id)=== -1){
           var dbName = `${(!table.db || table.db === 'mov_movember_com_live')?await this.getDBNameFromCampaignId(campaignId):table.db}`;
           fromstring = ` FROM ${dbName}.${table.name} ${table.alias}`
           parentTableIds.push(table.id);
         }
+        if (!field.send_to_sf)
+          continue;
         if (field.validations && field.validations.length >0)
         {
           validations.push({field:field.default_sf_map_name,validations:field.validations});
@@ -353,7 +353,7 @@ async getConditions(campaignId,object): Promise<any > {
 
   async getTables(campaignId,object): Promise<any > {
     let con = await mysqlClient.getMysqlConnection(); 
-    let sql = `select id,table_db as db , table_name as name,alias from sf_dataset_tables where ${object?"object_id="+object+" AND":''} campaign_id ${campaignId?' ='+campaignId:' IS NULL'}`;
+    let sql = `select id,table_db as db , table_name as name,alias,is_main_table from sf_dataset_tables where ${object?"object_id="+object+" AND":''} campaign_id ${campaignId?' ='+campaignId:' IS NULL'}`;
     const objects = await con.promise().query(sql);          
     if (objects!= null && objects.length >0 )
     {
@@ -678,7 +678,13 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
                   title=?, sf_map_name=?, type=? ,send_to_sf=?
                   WHERE campaign_id ${campaignId?' ='+campaignId:' IS NULL'} AND id= ?`; 
         let con = await mysqlClient.getMysqlConnection();
-        var sendToSf = field.send_to_sf && field.send_to_sf ==="false"?0:1;
+        if (field.send_to_sf ==='true'){
+          field.send_to_sf = true;
+          }
+          else if (field.send_to_sf==='false'){
+            field.send_to_sf = true;
+          }
+         var sendToSf = field.send_to_sf?1:0;
         const data:any = await con.promise().query(sql,[`${field.table}`,`${field.object}`,`${field.alias_name}`,`${field.name}`,`${field.title}`,`${field.default_sf_map_name}`,`${field.type}`,sendToSf, id]);
 
         if (data[0] != null && data[0].affectedRows >0){
@@ -853,8 +859,13 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
              return false;
            }
          }
-
-         var sendToSf = field.send_to_sf && field.send_to_sf ==="false"?0:1;
+         if (field.send_to_sf ==='true'){
+          field.send_to_sf = true;
+          }
+          else if (field.send_to_sf==='false'){
+            field.send_to_sf = true;
+          }
+         var sendToSf = field.send_to_sf?1:0;
         values.push( [`${fieldtable}`,`${fieldObject}`,`${field.alias_name}`,`${field.name}`,`${field.title}`,`${field.default_sf_map_name}`,`${field.type}`,`${sendToSf}`,campaignId]);
         validations.push(field.validations);
         transformations.push(field.transforms);
@@ -1160,8 +1171,34 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
     }
 
 
-    async updateTable(campaignId , table, tableId) {      
-      var sql = `UPDATE sf_dataset_tables SET table_db= '${table.table_db}', alias = '${table.alias}' ,table_name='${table.table_name}' WHERE id = ${tableId}`; 
+    async updateTable(campaignId , table, tableId) {  
+      if (table.is_main_table) 
+      {
+        var sqlgetUsed = `Select * from sf_dataset_tables WHERE id <> ${tableId} AND is_main_table = 1  AND object_id= ${table.object} AND campaign_id=${campaignId} LIMIT 1`;
+        try {
+          let con = await mysqlClient.getMysqlConnection();
+          const tables:any = await con.promise().query(sqlgetUsed);
+  
+          if (tables != null && tables.length >0 && tables[0].length >0)
+          {          
+              return {
+                errorMessage: `Only one table can be set as main table.`
+              };
+          }
+        } catch (err) {
+          return {
+            errorMessage: `Something went wrong!! Please try again. \n\n error: ${err}`
+          };
+        }
+      }
+      
+      if (table.is_main_table ==='true'){
+        table.is_main_table = true;
+      }
+      else if (table.is_main_table==='false'){
+        table.is_main_table = true;
+      }
+      var sql = `UPDATE sf_dataset_tables SET table_db= '${table.table_db}', alias = '${table.alias}' ,table_name='${table.table_name}', is_main_table= ${table.is_main_table?1:0} WHERE id = ${tableId}`; 
       try {
         let con = await mysqlClient.getMysqlConnection();
         await con.promise().query(sql);        
@@ -1196,7 +1233,7 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
       if (tables.length >0){
         
         var objects  = await this.getObjects(campaignId);
-        var sql = "INSERT INTO sf_dataset_tables (object_id,table_db,table_name, alias,campaign_id) VALUES ?"; 
+        var sql = "INSERT INTO sf_dataset_tables (object_id,table_db,table_name, alias,is_main_table,campaign_id) VALUES ?"; 
         
         var values =[];
         for(let i=0;i<tables.length;i++){
@@ -1215,7 +1252,13 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
                return false;
              }
            }
-          values.push( [`${fieldObject}`,`${table.table_db}`,`${table.table_name}`,`${table.alias}`,campaignId]);
+          if (table.is_main_table ==='true'){
+            table.is_main_table = true;
+          }
+          else if (table.is_main_table==='false'){
+            table.is_main_table = true;
+          }
+          values.push( [`${fieldObject}`,`${table.table_db}`,`${table.table_name}`,`${table.alias}`,table.is_main_table?1:0,campaignId]);
         }
         try {
           let con = await mysqlClient.getMysqlConnection();
@@ -1793,7 +1836,7 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
             }
             
 
-            var table = tableArr.find(x=>x.id === parseInt( datasetJson.fields[i].table));
+            var table = tableArr. find(x=>x.id === parseInt( datasetJson.fields[i].table));
             var recTable = {name:'',alias:''};
             if (table){
               recTable.name = table.table_name
@@ -1909,7 +1952,8 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
               object:{id: rec.object_id, name:paramObj.name},
               table_db:rec.table_db,
               table_name:rec.table_name,
-              alias:rec.alias
+              alias:rec.alias,
+              is_main_table:rec.is_main_table === 1?true: false
             }
             tablArr.push(tableRec);
           }

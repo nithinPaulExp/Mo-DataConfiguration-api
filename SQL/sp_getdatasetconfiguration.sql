@@ -81,7 +81,7 @@ PREPARE stmt FROM @sqlQuery;
 	EXECUTE stmt;     
 	DEALLOCATE PREPARE stmt;
 	
-SET tableSQL = ' SELECT id,object_id,table_db, table_name, alias FROM sf_dataset_tables WHERE ';
+SET tableSQL = ' SELECT id,object_id,table_db, table_name, alias,is_main_table FROM sf_dataset_tables WHERE ';
 
 if campaignId IS NULL then
  SET tableSQL = CONCAT(tableSQL,'campaign_id is null');
