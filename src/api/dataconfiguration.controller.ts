@@ -72,9 +72,6 @@ export const getConditions = async (req: Request, res: Response) => {
 export const getRelations = async (req: Request, res: Response) => {
   const campaignId = req.params['campaignId'];
   const object = req.query['object'];
-  if (object == null){
-    return res.status(400).json({error:"object is missing"});
-  }
   const conditions = await dataConfigurationBLL.getRelations(campaignId,object);
   if (conditions == null){
     return res.status(200).json({error:" No relations found"});
