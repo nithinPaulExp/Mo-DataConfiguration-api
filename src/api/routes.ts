@@ -34,7 +34,10 @@ apiRouter.get(
   '/dataconfiguration/objects/:campaignId?',
   asyncErrHandler(dataConfigurationController.getObjects),
 );
-
+apiRouter.get(
+  '/dataconfiguration/subobject/:campaignId?',
+  asyncErrHandler(dataConfigurationController.getSubObjects),
+);
 apiRouter.get(
   '/dataconfiguration/tables/:campaignId?',
   asyncErrHandler(dataConfigurationController.getTables),
@@ -43,9 +46,21 @@ apiRouter.get(
   '/dataconfiguration/conditions/:campaignId?',
   asyncErrHandler(dataConfigurationController.getConditions),
 );
+apiRouter.get(
+  '/dataconfiguration/subconditions/:campaignId?',
+  asyncErrHandler(dataConfigurationController.getSubConditions),
+);
+apiRouter.delete(
+  '/dataconfiguration/subconditions/:id',
+  asyncErrHandler(dataConfigurationController.deleteSubCondition),
+);
 apiRouter.post(
   '/dataconfiguration/conditions/:campaignId?',
   asyncErrHandler(dataConfigurationController.createOrUpdateConditions),
+);
+apiRouter.post(
+  '/dataconfiguration/subconditions/:campaignId?',
+  asyncErrHandler(dataConfigurationController.createOrUpdateSubConditions),
 );
 apiRouter.delete(
   '/dataconfiguration/conditions/:id',
@@ -142,6 +157,11 @@ apiRouter.post(
   asyncErrHandler(dataConfigurationController.createOrUpdateObjects),
 );
 
+apiRouter.post(
+  '/dataconfiguration/subobject/:campaignId?',
+  asyncErrHandler(dataConfigurationController.createOrUpdateSubObjects),
+);
+
 apiRouter.get(
   '/dataconfiguration/relation/:campaignId?',
   asyncErrHandler(dataConfigurationController.getRelations),
@@ -159,6 +179,11 @@ apiRouter.delete(
 apiRouter.delete(
   '/dataconfiguration/object/:id?',
   asyncErrHandler(dataConfigurationController.deleteObject),
+);
+
+apiRouter.delete(
+  '/dataconfiguration/subobject/:id?',
+  asyncErrHandler(dataConfigurationController.deleteSubObject),
 );
 apiRouter.get('/dataconfiguration/campaigns', asyncErrHandler(dataConfigurationController.getCampaigns));
 

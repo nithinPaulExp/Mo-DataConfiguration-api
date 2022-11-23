@@ -9,12 +9,16 @@ CREATE TABLE `sf_dataset_fields` (
   `created` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `object` int unsigned NOT NULL,
+  `sub_object_id` int UNSIGNED NULL DEFAULT NULL,
   `alias_name` varchar(500) NOT NULL,
   `send_to_sf` TINYINT NOT NULL DEFAULT '1',
+  `sql_function` varchar(100) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `UNQ_DATA_FIELDS` (`campaign_id`,`table_id`,`name`,`object`),
   KEY `FK_OBJECT` (`object`),
   KEY `FK_TABLE` (`table_id`),
+  KEY `FK_SUB_OBEJCT_FIELD` (`sub_object_id`), 
+  CONSTRAINT `FK_SUB_OBEJCT_FIELD` FOREIGN KEY (`sub_object_id`) REFERENCES `sf_dataset_sub_objects` (`id`),
   CONSTRAINT `FK_OBJECT` FOREIGN KEY (`object`) REFERENCES `sf_dataset_objects` (`id`),
   CONSTRAINT `FK_TABLE` FOREIGN KEY (`table_id`) REFERENCES `sf_dataset_tables` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8;

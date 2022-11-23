@@ -1,0 +1,23 @@
+CREATE TABLE `sf_dataset_sub_object_conditions_fields` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `sub_condition_id` int unsigned NOT NULL,
+  `parent_table_id` int unsigned NOT NULL,
+  `parent_table_field` int unsigned NOT NULL,
+  `sub_table_id` int unsigned NOT NULL,
+  `sub_table_field` int unsigned NOT NULL,
+  `created` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `campaign_id` int DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `UNQ_TABLE_FIELDS` (`sub_condition_id`,`parent_table_id`,`parent_table_field`,`sub_table_id`,`sub_table_field`),
+  KEY `FK_PARENT_FIELD` (`parent_table_field`),
+  KEY `FK_TARGET_FIELD` (`sub_table_field`),
+  KEY `FK_PARENT_TABLE` (`parent_table_id`),
+  KEY `FK_TARGET_TABLE` (`sub_table_id`),
+  KEY `FK_SUB_CONDITION` (`sub_condition_id`),
+  CONSTRAINT `FK_SUB_CONDITION` FOREIGN KEY (`sub_condition_id`) REFERENCES `sf_dataset_sub_object_conditions` (`id`),
+  CONSTRAINT `FK_PARENT_FIELD` FOREIGN KEY (`parent_table_field`) REFERENCES `sf_dataset_fields` (`id`),
+  CONSTRAINT `FK_PARENT_TABLE` FOREIGN KEY (`parent_table_id`) REFERENCES `sf_dataset_tables` (`id`),
+  CONSTRAINT `FK_TARGET_FIELD` FOREIGN KEY (`sub_table_field`) REFERENCES `sf_dataset_fields` (`id`),
+  CONSTRAINT `FK_TARGET_TABLE` FOREIGN KEY (`sub_table_id`) REFERENCES `sf_dataset_tables` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;

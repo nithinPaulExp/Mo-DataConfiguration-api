@@ -46,10 +46,21 @@ export const getObjects = async (req: Request, res: Response) => {
   return res.status(200).json(configurations);
 };
 
+export const getSubObjects = async (req: Request, res: Response) => {
+  const campaignId = req.params['campaignId'];
+  const objId = req.query['object'];
+  const configurations = await dataConfigurationBLL.getSubObjects(campaignId,objId);
+  if (configurations == null){
+    return res.status(200).json({error:"Something went wrong, No Configuration found"});
+  }
+  return res.status(200).json(configurations);
+};
+
 export const getTables = async (req: Request, res: Response) => {
   const campaignId = req.params['campaignId'];
   const object = req.query['object'];
-  const configurations = await dataConfigurationBLL.getTables(campaignId,object);
+  const subobject = req.query['subobject'];
+  const configurations = await dataConfigurationBLL.getTables(campaignId,object,subobject);
   if (configurations == null){
     return res.status(200).json({error:"Something went wrong, No Configuration found"});
   }
@@ -68,11 +79,22 @@ export const getConditions = async (req: Request, res: Response) => {
   }
   return res.status(200).json(conditions);
 };
+export const getSubConditions = async (req: Request, res: Response) => {
+  const campaignId = req.params['campaignId'];
+  const subObject = req.query['subobject'];
+  const object = req.query['object'];
+  const conditions = await dataConfigurationBLL.getSubObjectsConditions(campaignId,object,subObject);
+  if (conditions == null){
+    return res.status(200).json({error:"Something went wrong, No Configuration found"});
+  }
+  return res.status(200).json(conditions);
+};
 
 export const getRelations = async (req: Request, res: Response) => {
   const campaignId = req.params['campaignId'];
   const object = req.query['object'];
-  const conditions = await dataConfigurationBLL.getRelations(campaignId,object);
+  const subobject = req.query['subobject'];
+  const conditions = await dataConfigurationBLL.getRelations(campaignId,object,subobject);
   if (conditions == null){
     return res.status(200).json({error:" No relations found"});
   }
@@ -109,6 +131,7 @@ export const createOrUpdateTable = async (req: Request, res: Response) => {
   }
   return res.status(200).json(response);
 };  
+
 
 export const deleteTable = async (req: Request, res: Response) => {
   const id = req.params['id'];
@@ -152,6 +175,18 @@ export const updateInitialConfiguration = async (req: Request, res: Response) =>
     }
     return res.status(200).json(response);
   };  
+
+  export const createOrUpdateSubObjects = async (req: Request, res: Response) => {
+    const campaignId = req.params['campaignId'];
+    const dataSet = req.body;
+    const id = req.query['id'];
+    var response = await dataConfigurationBLL.createOrUpdateSubObject(campaignId,dataSet,id)
+    if (response.errorMessage){
+      return res.status(200).json(response);
+    }
+    return res.status(200).json(response);
+  }; 
+
   
   export const deleteObject = async (req: Request, res: Response) => {
     const id = req.params['id'];
@@ -164,6 +199,19 @@ export const updateInitialConfiguration = async (req: Request, res: Response) =>
     }
     return res.status(200).json(response);
   }; 
+
+  export const deleteSubObject = async (req: Request, res: Response) => {
+    const id = req.params['id'];
+    if (id== null){
+      return res.status(200).json({errorMessage:"Object id is missing"});
+    }
+    var response = await dataConfigurationBLL.deleteSubObject(id)
+    if (response.errorMessage){
+      return res.status(200).json(response);
+    }
+    return res.status(200).json(response);
+  }; 
+
 
   export const updateValidation = async (req: Request, res: Response) => {
     const campaignId = req.params['campaignId'];
@@ -249,7 +297,8 @@ export const updateInitialConfiguration = async (req: Request, res: Response) =>
     const campaignId = req.params['campaignId'];
     const object = req.query['object'];
     const table = req.query['table'];
-    const fields = await dataConfigurationBLL.getFields(campaignId,object,table);
+    const subObject = req.query['subobject'];
+    const fields = await dataConfigurationBLL.getFields(campaignId,object,table,subObject);
     if (fields == null){
       return res.status(200).json({error:"Something went wrong, No fields found"});
     }
@@ -288,6 +337,14 @@ export const updateInitialConfiguration = async (req: Request, res: Response) =>
     }
     return res.status(200).json(response);
   }; 
+  export const createOrUpdateSubConditions = async (req: Request, res: Response) => {
+    const campaignId = req.params['campaignId'];
+    const condition = req.body;
+    const id = req.query['id'];
+    var response = await dataConfigurationBLL.createOrUpdateSubCondition(campaignId,condition,id)
+    return res.status(200).json(response);
+  }; 
+
 
   export const deleteCondition = async (req: Request, res: Response) => {
     const id = req.params['id'];
@@ -295,6 +352,18 @@ export const updateInitialConfiguration = async (req: Request, res: Response) =>
       return res.status(200).json({errorMessage:"Condition id is missing"});
     }
     var response = await dataConfigurationBLL.deleteCondition(id)
+    if (response.errorMessage){
+      return res.status(200).json(response);
+    }
+    return res.status(200).json(response);
+  };
+
+  export const deleteSubCondition = async (req: Request, res: Response) => {
+    const id = req.params['id'];
+    if (id== null){
+      return res.status(200).json({errorMessage:"Sub Condition id is missing"});
+    }
+    var response = await dataConfigurationBLL.deleteSubCondition(id)
     if (response.errorMessage){
       return res.status(200).json(response);
     }

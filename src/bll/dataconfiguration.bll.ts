@@ -14,9 +14,12 @@ export default class DataCofigurationBLL {
   async getObjects(campaignId): Promise<any> {
     return await dataConfigurationDAL.getObjects(campaignId);
   }
+  async getSubObjects(campaignId,objId): Promise<any> {
+    return await dataConfigurationDAL.getSubObjects(campaignId,objId);
+  }
 
-  async getTables(campaignId,objectId): Promise<any> {
-    return await dataConfigurationDAL.getTables(campaignId,objectId);
+  async getTables(campaignId,objectId,subobject=null): Promise<any> {
+    return await dataConfigurationDAL.getTables(campaignId,objectId,subobject);
   }
 
   async checkInitialConfigurationExists(campaignId,isSync): Promise<any> {
@@ -64,14 +67,27 @@ export default class DataCofigurationBLL {
     return await dataConfigurationDAL.getConditions(campaignId,objId);
       
   }
+  async getSubObjectsConditions(campaignId,objId,subObjectId): Promise<any> {
+    
+    return await dataConfigurationDAL.getSubObjectsConditions(campaignId,objId,subObjectId);
+      
+  }
+  
   
   async createOrUpdateCondition(campaignId,obj,id=null): Promise<any> {
     return await dataConfigurationDAL.createOrUpdateConditions(campaignId,obj,id);
       
   }
+  async createOrUpdateSubCondition(campaignId,obj,id=null): Promise<any> {
+    return await dataConfigurationDAL.createOrUpdateSubConditions(campaignId,obj,id);
+      
+  }
 
   async deleteCondition(condId): Promise<any> {
     return await dataConfigurationDAL.deleteCondition(condId);      
+  }
+  async deleteSubCondition(condId): Promise<any> {
+    return await dataConfigurationDAL.deleteSubCondition(condId);      
   }
 
   async getCredential(): Promise<any> {
@@ -82,9 +98,9 @@ export default class DataCofigurationBLL {
     return await dataConfigurationDAL.saveCredential(obj);      
   }
 
-  async getRelations(campaignId,objId): Promise<any> {
+  async getRelations(campaignId,objId,subobject): Promise<any> {
     
-    return await dataConfigurationDAL.getRelations(campaignId,objId);      
+    return await dataConfigurationDAL.getRelations(campaignId,objId,subobject);      
   }
 
   async generateData(campaignId,objId,request): Promise<any> {
@@ -178,6 +194,12 @@ export default class DataCofigurationBLL {
     return await dataConfigurationDAL.createOrUpdateObject(campaignId,obj,objectId);
       
   }
+
+  async createOrUpdateSubObject(campaignId,obj,objectId=null): Promise<any> {
+    return await dataConfigurationDAL.createOrUpdateSubObject(campaignId,obj,objectId);
+      
+  }
+
   async getTransformations(campaignId): Promise<any> {
     return await dataConfigurationDAL.getTransformations(campaignId);
       
@@ -193,6 +215,10 @@ export default class DataCofigurationBLL {
     return await dataConfigurationDAL.deleteObject(objectId);
       
   }
+  async deleteSubObject(objectId): Promise<any> {
+    return await dataConfigurationDAL.deleteSubObject(objectId);
+      
+  }
 
   async createOrUpdateFields(campaignId,obj,fieldId=null): Promise<any> {
     return await dataConfigurationDAL.createOrUpdateFields(campaignId,obj,fieldId);
@@ -204,8 +230,8 @@ export default class DataCofigurationBLL {
       
   }
 
-  async getFields(campaignId,object = null,table = null): Promise<any> {
-    return await dataConfigurationDAL.getFields(campaignId,object,table);      
+  async getFields(campaignId,object = null,table = null,subObject=null): Promise<any> {
+    return await dataConfigurationDAL.getFields(campaignId,object,table,subObject);      
   }
 
   async getDatabases(): Promise<any> {

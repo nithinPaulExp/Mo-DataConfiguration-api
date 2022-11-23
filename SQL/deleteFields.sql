@@ -13,6 +13,10 @@ BEGIN
     	DELETE FROM sf_dataset_fields WHERE id = fieldId;
     	DELETE FROM sf_dataset_tables_relation WHERE (on_parent = fieldId OR on_target = fieldId);
     	DELETE FROM sf_dataset_object_conditions WHERE where_field = fieldId;
+
+		DELETE FROM sf_dataset_sub_object_conditions WHERE apply_table_field = fieldId;
+		
+		DELETE FROM sf_dataset_sub_object_conditions_fields WHERE parent_table_field = fieldId OR sub_table_field = fieldId;
     END IF;
 
 END $$
