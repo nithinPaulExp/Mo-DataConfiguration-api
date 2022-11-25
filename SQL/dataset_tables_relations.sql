@@ -21,3 +21,14 @@ CREATE TABLE `sf_dataset_tables_relation` (
   CONSTRAINT `FK_TARGET_FIELD` FOREIGN KEY (`target_table_id`) REFERENCES `sf_dataset_fields` (`id`),
   CONSTRAINT `FK_TARGET_TABLE` FOREIGN KEY (`target_table_id`) REFERENCES `sf_dataset_tables` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
+ALTER TABLE sf_dataset_tables_relation MODIFY on_target int UNSIGNED NULL DEFAULT NULL;
+
+ALTER TABLE sf_dataset_tables_relation ADD COLUMN parent_exp VARCHAR(500) NULL DEFAULT NULL AFTER sub_object_id;
+ALTER TABLE sf_dataset_tables_relation ADD COLUMN target_table_exp VARCHAR(500) NULL DEFAULT NULL AFTER sub_object_id;
+ALTER TABLE sf_dataset_tables_relation MODIFY on_parent int UNSIGNED NULL DEFAULT NULL;
+
+ALTER TABLE sf_dataset_tables_relation ADD COLUMN target_is_constant TINYINT NOT NULL;
+
+ALTER TABLE sf_dataset_tables_relation ADD COLUMN target_exp VARCHAR(500) NULL DEFAULT NULL AFTER target_table_id;

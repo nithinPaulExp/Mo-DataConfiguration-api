@@ -95,7 +95,7 @@ PREPARE stmt FROM @sqlQuery;
 	EXECUTE stmt;     
 	DEALLOCATE PREPARE stmt;
 
-SET relationSQL = ' SELECT id,sub_object_id,parent_table_id, target_table_id,relation, on_parent, on_target, additional_join_condition FROM sf_dataset_tables_relation WHERE ';
+SET relationSQL = ' SELECT id,sub_object_id,parent_table_id, target_table_id,relation, on_parent, on_target,parent_exp,target_is_constant,target_exp,target_table_exp, additional_join_condition FROM sf_dataset_tables_relation WHERE ';
 
 if campaignId IS NULL then
  SET relationSQL = CONCAT(relationSQL,'campaign_id is null');

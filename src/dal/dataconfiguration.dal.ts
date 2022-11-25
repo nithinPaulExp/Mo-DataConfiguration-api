@@ -376,8 +376,11 @@ async getColumsInTableFromDB(dbName,tableName,campaignId) {
         {
           transformations.push({field:field.default_sf_map_name,transformations:field.transforms});
         }
-
         var fieldName = field.function?`${field.function}(${table.alias}.${field.name})`:`${table.alias}.${field.name}`;
+       
+        if (field.function && field.function === 'GROUP_CONCAT'){
+          fieldName = `${field.function}(DISTINCT ${table.alias}.${field.name})`;
+        }
         fieldsList.push( `${fieldName} ${field.alias_name?"AS "+field.default_sf_map_name:''}`);
       } 
 
@@ -405,11 +408,20 @@ async getColumsInTableFromDB(dbName,tableName,campaignId) {
             var targetTable = tables.find(x=>x.id===parseInt(relationRec.target_table.id));
             var dbName = `${(!targetTable.db || targetTable.db === 'mov_movember_com_live')?await this.getDBNameFromCampaignId(campaignId):targetTable.db}`;
           
-            var relQuery = `${relationRec.relation}
-                              ${dbName}.${relationRec.target_table.name} ${relationRec.target_table.alias}
-                              ON 
-                              ${relationRec.parent_table.alias}.${relationRec.on_parent.name} =  ${relationRec.target_table.alias}.${relationRec.on_target.name}
-                              ${joinCondition?joinCondition:''}`;
+            var relQuery = null;
+            if (relationRec.target_is_constant){
+              relQuery =`${relationRec.relation}
+              ${relationRec.target_table.name} ${relationRec.target_table.alias}
+              ON 
+              ${relationRec.target_table.alias}.${relationRec.on_target.name} ${relationRec.target_table_exp?relationRec.target_table_exp:''}= ${relationRec.target_exp?relationRec.target_exp:''}
+              ${joinCondition?joinCondition:''}`;
+            } else {
+              relQuery =`${relationRec.relation}
+                ${dbName}.${relationRec.target_table.name} ${relationRec.target_table.alias}
+                ON 
+                ${relationRec.parent_table.alias}.${relationRec.on_parent.name} ${relationRec.parent_exp?relationRec.parent_exp:''}=  ${relationRec.target_table.alias}.${relationRec.on_target.name} ${relationRec.target_table_exp?relationRec.target_table_exp:''}
+                ${joinCondition?joinCondition:''}`;
+            }
             relationsQuery.push(relQuery);            
             joinParentTables.push(relationRec.target_table.id);
           }
@@ -1759,8 +1771,8 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
       if (obj.objects){
         hasUpdated = await this.createObjects(campaignId,obj.objects)
       }
-      if (obj.sub_objects){
-        hasUpdated = await this.createSubObjects(campaignId,obj.sub_objects)
+      if (obj.subobjects){
+        hasUpdated = await this.createSubObjects(campaignId,obj.subobjects)
       }
 
       if (obj.tables){
@@ -1799,7 +1811,16 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
         var objects  = await this.getObjects(campaignId);       
 
 
-        var sql = "INSERT INTO sf_dataset_tables_relation (sub_object_id,parent_table_id,target_table_id,relation,on_parent,on_target,additional_join_condition,campaign_id) VALUES ?"; 
+        var sql = `INSERT INTO sf_dataset_tables_relation 
+                  (
+                    sub_object_id,parent_table_id,target_table_id,relation,on_parent,on_target,
+                    additional_join_condition,
+                    parent_exp,
+                    target_is_constant,
+                    target_table_exp,
+                    target_exp,
+                    campaign_id
+                  ) VALUES ?`; 
         
         var values =[];
         for(let i=0;i<relations.length;i++){
@@ -1853,55 +1874,73 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
            }
          }
 
-         var fieldTargetTable=relation.target_table;
-        if (typeof relation.target_table === 'object'){
-          var table = tables.find(x=>(x.name === relation.target_table.name && x.alias === relation.target_table.alias));
-           if (!table){
-             return false;
+         var fieldTargetTable=null;
+         if (relation.target_table){
+          fieldTargetTable = relation.target_table
+          if (typeof relation.target_table === 'object'){
+            var table = tables.find(x=>(x.name === relation.target_table.name && x.alias === relation.target_table.alias));
+             if (!table){
+               return false;
+             }
+             fieldTargetTable = table.id;
            }
-           fieldTargetTable = table.id;
-         }
-         else {
-           var isValidTable = tables.find(x=>x.id === parseInt(fieldTargetTable));
-           if (!isValidTable){
-             return false;
+           else {
+             var isValidTable = tables.find(x=>x.id === parseInt(fieldTargetTable));
+             if (!isValidTable){
+               return false;
+             }
            }
-         }
+         }        
 
-         var parentFields = await this.getFieldsByTable(campaignId,fieldParentTable);
-
-         var fieldParentField=relation.on_parent;
-        if (typeof relation.on_parent === 'object'){
-          var field = parentFields.find(x=>(x.name === relation.on_parent.name));
-           if (!field){
-             return false;
-           }
-           fieldParentField = field.id;
-         }
-         else {
-           var isValidTable = parentFields.find(x=>x.id === parseInt(fieldParentField));
-           if (!isValidTable){
-             return false;
-           }
-         }
-
-         var targetFields = await this.getFieldsByTable(campaignId,fieldTargetTable);
-
-        var fieldTargetField=relation.on_target;
-        if (typeof relation.on_target === 'object'){
-          var field = targetFields.find(x=>(x.name === relation.on_target.name));
-           if (!field){
-             return false;
-           }
-           fieldTargetField = field.id;
+        var fieldParentField=null;
+        if (relation.on_parent){
+          var parentFields = await this.getFieldsByTable(campaignId,fieldParentTable);
+          fieldParentField=relation.on_parent;
+          if (typeof relation.on_parent === 'object'){
+            var field = parentFields.find(x=>(x.name === relation.on_parent.name));
+            if (!field){
+              return false;
+            }
+            fieldParentField = field.id;
           }
           else {
-           var isValidTable = targetFields.find(x=>x.id === parseInt(fieldTargetField));
-           if (!isValidTable){
-             return false;
-           }
+            var isValidTable = parentFields.find(x=>x.id === parseInt(fieldParentField));
+            if (!isValidTable){
+              return false;
+            }
           }
-          values.push( [fieldSubObject,`${fieldParentTable}`,`${fieldTargetTable}`,`${relation.relation}`,`${fieldParentField}`,`${fieldTargetField}`,`${relation.additional_join_condition}`,campaignId]);
+        }
+         
+
+        var fieldTargetField=null;
+        if (relation.on_target )
+        {
+          var targetFields = await this.getFieldsByTable(campaignId,fieldTargetTable);
+ 
+          fieldTargetField = relation.on_target;
+          if (typeof relation.on_target === 'object'){
+            var field = targetFields.find(x=>(x.name === relation.on_target.name));
+            if (!field){
+              return false;
+            }
+            fieldTargetField = field.id;
+          }
+          else {
+            var isValidTable = targetFields.find(x=>x.id === parseInt(fieldTargetField));
+            if (!isValidTable){
+              return false;
+            }
+          }
+        }
+        if (relation.target_is_constant ==='true'){
+          relation.target_is_constant = true;
+          }
+          else if (relation.target_is_constant==='false'){
+            relation.target_is_constant = false;
+          }
+          var targetIsConstant =  relation.target_is_constant?1:0;
+           
+          values.push( [fieldSubObject,`${fieldParentTable}`,fieldTargetTable,`${relation.relation}`,fieldParentField,fieldTargetField,`${relation.additional_join_condition}`,`${relation.parent_exp}`,targetIsConstant,`${relation.target_table_exp}`,`${relation.target_exp}`,campaignId]);
         }
         try {
           let con = await mysqlClient.getMysqlConnection();
@@ -1950,33 +1989,43 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
           }
          
 
-        var fieldTargetTable=relation.target_table;
+        var fieldTargetTable=null;
+        if (relation.target_table){
+          fieldTargetTable = relation.target_table;
         
-        var isValidTable = tables.find(x=>x.id === parseInt(fieldTargetTable));
-        if (!isValidTable){
-          return {
-            errorMessage: `Invalid target table selection.`            
+          var isValidTable = tables.find(x=>x.id === parseInt(fieldTargetTable));
+          if (!isValidTable){
+            return {
+              errorMessage: `Invalid target table selection.`            
+            }
           }
         }
          
+        var fieldParentField= null;
+        if (relation.on_parent)
+        {
+          var parentFields = await this.getFieldsByTable(campaignId,fieldParentTable);
 
-        var parentFields = await this.getFieldsByTable(campaignId,fieldParentTable);
+          fieldParentField=relation.on_parent;        
+          var isValidTable = parentFields.find(x=>x.id === parseInt(fieldParentField));
+          if (!isValidTable){
+            return {
+              errorMessage: `Invalid parent field selection.`            
+            }
+          }     
+        }    
 
-        var fieldParentField=relation.on_parent;        
-        var isValidTable = parentFields.find(x=>x.id === parseInt(fieldParentField));
-        if (!isValidTable){
-          return {
-            errorMessage: `Invalid parent field selection.`            
-          }
-        }         
+        var fieldTargetField= null;
+        if (relation.on_target)
+        {
+          fieldTargetField=relation.on_target;
+          var targetFields = await this.getFieldsByTable(campaignId,fieldTargetTable);
 
-        var targetFields = await this.getFieldsByTable(campaignId,fieldTargetTable);
-
-        var fieldTargetField=relation.on_target;
-        var isValidTable = targetFields.find(x=>x.id === parseInt(fieldTargetField));
-        if (!isValidTable){
-          return {
-            errorMessage: `Invalid target field selection.`            
+          var isValidTable = targetFields.find(x=>x.id === parseInt(fieldTargetField));
+          if (!isValidTable){
+            return {
+                errorMessage: `Invalid target field selection.`            
+            }
           }
         }
           
@@ -1988,13 +2037,25 @@ async getFieldsByTable(campaignId,tableId): Promise<any > {
                       relation=?,
                       on_parent=?,
                       on_target=?,
+                      parent_exp=?,
+                      target_is_constant=?,
+                      target_table_exp=?,
+                      target_exp=?,
                       additional_join_condition=?
                       WHERE campaign_id=? AND id=?`; 
+
+        if (relation.target_is_constant ==='true'){
+          relation.target_is_constant = true;
+        }
+        else if (relation.target_is_constant==='false'){
+          relation.target_is_constant = false;
+        }
+        var targetIsConstant =  relation.target_is_constant?1:0;
         
         
         try {
           let con = await mysqlClient.getMysqlConnection();
-          const data:any = await con.promise().query(sql,[`${fieldParentTable}`,fieldSubObject,`${fieldTargetTable}`,`${relation.relation}`,`${fieldParentField}`,`${fieldTargetField}`,`${relation.additional_join_condition}`,campaignId,id]);
+          const data:any = await con.promise().query(sql,[`${fieldParentTable}`,fieldSubObject,fieldTargetTable,`${relation.relation}`,fieldParentField,fieldTargetField,relation.parent_exp,targetIsConstant,relation.target_table_exp,relation.target_exp,`${relation.additional_join_condition}`,campaignId,id]);
           if (data[0] != null && data[0].affectedRows >0){
             return true;
           }
@@ -2095,7 +2156,7 @@ async createSubConditionMapping(subConditionId,condition,campaignId,conditionObj
       var cndfield = condition.fields[j];
       var parentTable=cndfield.parent_table;
       if (typeof cndfield.parent_table === 'object'){
-        var table = tables.find(x=>(x.name === cndfield.table.name && x.alias === cndfield.table.alias));
+        var table = tables.find(x=>(x.name === cndfield.parent_table.name && x.alias === cndfield.parent_table.alias));
         if (!table){
           return false;
         }
@@ -2109,7 +2170,7 @@ async createSubConditionMapping(subConditionId,condition,campaignId,conditionObj
       }
       var subTable=cndfield.sub_table;
       if (typeof cndfield.sub_table === 'object'){
-        var table = tables.find(x=>(x.name === cndfield.table.name && x.alias === cndfield.table.alias));
+        var table = tables.find(x=>(x.name === cndfield.sub_table.name && x.alias === cndfield.sub_table.alias));
         if (!table){
           return false;
         }
@@ -2257,7 +2318,7 @@ async createSubConditionMapping(subConditionId,condition,campaignId,conditionObj
               conditionValues.push ([`${condition.name}`,`${conditionObject}`,conditionSubObject,`${isApply}`])
             
               if (condition.apply_is_data){
-                conditionValues[0].push(applyTable,applyTableField,condition.field_where_clause);
+                conditionValues[0].push(`${condition.apply_is_data_conjunction_type}`,applyTable,applyTableField,condition.field_where_clause);
               }
               conditionValues[0].push(`${condition.where_clause}`,`${condition.groupby_clause}`,campaignId);
             let con = await mysqlClient.getMysqlConnection();
@@ -2510,7 +2571,17 @@ async createSubConditionMapping(subConditionId,condition,campaignId,conditionObj
               recObj.name = obj.name
               datasetJson.fields[i].object = recObj;
             }
-            
+
+            if (datasetJson.fields[i].sub_object)
+            {
+              var subObj = subObjectArr.find(x=>x.id === parseInt( datasetJson.fields[i].sub_object));
+              var recSubObj = {name:''}
+              if (obj){
+                recSubObj.name = subObj.name
+                datasetJson.fields[i].sub_object = recSubObj;
+              }
+            }
+            delete datasetJson.fields[i].sub_object;
 
             var table = tableArr. find(x=>x.id === parseInt( datasetJson.fields[i].table));
             var recTable = {name:'',alias:''};
@@ -2537,25 +2608,94 @@ async createSubConditionMapping(subConditionId,condition,campaignId,conditionObj
           for(let i=0;i< datasetJson.objects.length;i++){
             delete datasetJson.objects[i].id;
           }
+
+          for(let i=0;i< datasetJson.subobjects.length;i++){
+            delete datasetJson.subobjects[i].id;
+          }
           
           for(let i=0;i< datasetJson.tables.length;i++){
             delete datasetJson.tables[i].id;
-            delete datasetJson.tables[i].object.id;
+            delete datasetJson.tables[i].object.id;   
+            if (datasetJson.tables[i].sub_object && datasetJson.tables[i].sub_object.id)                   
+            {
+              delete datasetJson.tables[i].sub_object.id;
+            }
+            else {
+              delete datasetJson.tables[i].sub_object;
+            }
           }
 
           for(let i=0;i< datasetJson.relations.length;i++){
             delete datasetJson.relations[i].id;
             delete datasetJson.relations[i].object.id;
-            delete datasetJson.relations[i].parent_table.id;
-            delete datasetJson.relations[i].target_table.id;
-            delete datasetJson.relations[i].on_parent.id;
-            delete datasetJson.relations[i].on_target.id;
+            if (datasetJson.relations[i].parent_table && datasetJson.relations[i].parent_table.id)                   
+            {
+              delete datasetJson.relations[i].parent_table.id;
+            }
+            else {
+              delete datasetJson.relations[i].parent_table;
+            }
+            if (datasetJson.relations[i].target_table && datasetJson.relations[i].target_table.id)                   
+            {
+              delete datasetJson.relations[i].target_table.id;
+            }
+            else {
+              delete datasetJson.relations[i].target_table;
+            }
+            if (datasetJson.relations[i].on_parent && datasetJson.relations[i].on_parent.id)                   
+            {
+              delete datasetJson.relations[i].on_parent.id;
+            }
+            else {
+              delete datasetJson.relations[i].on_parent;
+            }
+            if (datasetJson.relations[i].on_target && datasetJson.relations[i].on_target.id)                   
+            {
+              delete datasetJson.relations[i].on_target.id;  
+            }
+            else {
+              delete datasetJson.relations[i].on_target;
+            }
+            if (datasetJson.relations[i].sub_object && datasetJson.relations[i].sub_object.id)                   
+            {          
+              delete datasetJson.relations[i].sub_object.id;
+            }
+            else {
+              delete datasetJson.relations[i].sub_object;
+            }
           }
           for(let i=0;i< datasetJson.conditions.length;i++){
             delete datasetJson.conditions[i].id;
             delete datasetJson.conditions[i].object.id;
             delete datasetJson.conditions[i].table.id;
             delete datasetJson.conditions[i].field.id;
+          }
+          for(let i=0;i< datasetJson.sub_conditions.length;i++){
+            delete datasetJson.sub_conditions[i].id;
+            delete datasetJson.sub_conditions[i].object.id;
+            if (datasetJson.sub_conditions[i].sub_object && datasetJson.sub_conditions[i].sub_object.id)                   
+            {
+              delete datasetJson.sub_conditions[i].sub_object.id;
+            } 
+            else {
+              delete datasetJson.sub_conditions[i].sub_object;
+            }
+            if (datasetJson.sub_conditions[i].apply_table && datasetJson.sub_conditions[i].apply_table.id)                   
+            {
+              delete datasetJson.sub_conditions[i].apply_table.id;
+              delete datasetJson.sub_conditions[i].apply_table_field.id;
+            }
+            else {
+              delete datasetJson.sub_conditions[i].apply_table;
+              delete datasetJson.sub_conditions[i].apply_table_field;
+            }
+            for(let j=0;j<datasetJson.sub_conditions[i].fields.length;j++)
+            {          
+              delete datasetJson.sub_conditions[i].fields[j].parent_table.id;
+              delete datasetJson.sub_conditions[i].fields[j].sub_table.id;
+              delete datasetJson.sub_conditions[i].fields[j].parent_table_field.id;                
+              delete datasetJson.sub_conditions[i].fields[j].sub_table_field.id;
+            }
           }
         }
 
@@ -2659,6 +2799,10 @@ async createSubConditionMapping(subConditionId,condition,campaignId,conditionObj
             sub_object:{id:rec.sub_object_id,name:""},
             parent_table:{id:"", name:"",alias:""},
             target_table:{id:"", name:"",alias:""},
+            parent_exp:rec.parent_exp,
+            target_is_constant: rec.target_is_constant ===1?true:false,
+            target_exp:rec.target_exp,
+            target_table_exp:rec.target_table_exp,
             on_parent: {
               id:"",
               name: ""
@@ -2685,12 +2829,15 @@ async createSubConditionMapping(subConditionId,condition,campaignId,conditionObj
             relationRec.object = parenttableRec.object
           }
 
-          let targettableRec = this.findElementInArray(tableArr,rec.target_table_id);
-          if (targettableRec)
+          if (rec.target_table_id)
           {
-            relationRec.target_table.id = rec.target_table_id;
-            relationRec.target_table.name = targettableRec.table_name;
-            relationRec.target_table.alias= targettableRec.alias;
+            let targettableRec = this.findElementInArray(tableArr,rec.target_table_id);
+            if (targettableRec)
+            {
+              relationRec.target_table.id = rec.target_table_id;
+              relationRec.target_table.name = targettableRec.table_name;
+              relationRec.target_table.alias= targettableRec.alias;
+            }
           }
           
           let parentFieldRec = this.findElementInArray(fieldArr,rec.on_parent);
@@ -2700,11 +2847,14 @@ async createSubConditionMapping(subConditionId,condition,campaignId,conditionObj
             relationRec.on_parent.name = parentFieldRec.name;
           }
 
-          let targetFieldRec = this.findElementInArray(fieldArr,rec.on_target);
-          if (targetFieldRec)
+          if (rec.on_target)
           {
-            relationRec.on_target.id = rec.on_target;
-            relationRec.on_target.name = targetFieldRec.name;
+            let targetFieldRec = this.findElementInArray(fieldArr,rec.on_target);
+            if (targetFieldRec)
+            {
+              relationRec.on_target.id = rec.on_target;
+              relationRec.on_target.name = targetFieldRec.name;
+            }
           }
           relationArr.push(relationRec);
         }
