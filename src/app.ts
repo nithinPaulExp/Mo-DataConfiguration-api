@@ -39,15 +39,18 @@ export default class App {
     console.log('NodeApplication.Init.SetupMiddleware... Success');
   }
 
-  async setupResponseHeaders() {
-    this.app.use(function(req, res, next) {
-        res.setHeader('Origin',req.header('Origin')?req.header('Origin'):req.header('origin'))
-        res.setHeader('X-Requested-With', '*');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,x-requested-with');
-        res.setHeader('Access-Control-Allow-Origin', req.header('Origin')?req.header('Origin'):req.header('origin'));
-        res.setHeader('Access-Control-Allow-Methods', 'POST,GET,OPTIONS,PUT, DELETE,PATCH,*');
-        next();
-      });
+  async setupResponseHeaders() {this.app.use(function(req, res, next) {
+    var origin=req.header('Origin')?req.header('Origin'):req.header('origin');
+    if (origin){
+        res.setHeader('Origin',origin);            
+    }
+    
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('X-Requested-With', '*');
+    res.setHeader('Access-Control-Allow-Headers', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST,GET,OPTIONS,PUT, DELETE,PATCH,*');
+    next();
+  });
 }
 
   corsOptionDelegate(req,callback) {
