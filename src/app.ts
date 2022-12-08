@@ -30,14 +30,35 @@ export default class App {
   }
 
   async setupMiddleware() {    
-    this.app.use(cors());
+    this.app.use(cors(this.corsOptionDelegate));
     this.app.use(morgan(this.isDevelopmentEnv ? 'dev' : 'tiny'));
     this.app.use(bodyParser.urlencoded({ extended: false }));
     this.app.use(bodyParser.json());
     this.app.use(bodyParser.text());
+    await this.setupResponseHeaders();
     console.log('NodeApplication.Init.SetupMiddleware... Success');
   }
 
+  async setupResponseHeaders() {
+    this.app.use(function(req, res, next) {
+        res.setHeader('Origin',req.header('Origin')?req.header('Origin'):req.header('origin'))
+        res.setHeader('X-Requested-With', '*');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,x-requested-with');
+        res.setHeader('Access-Control-Allow-Origin', req.header('Origin')?req.header('Origin'):req.header('origin'));
+        res.setHeader('Access-Control-Allow-Methods', 'POST,GET,OPTIONS,PUT, DELETE,PATCH,*');
+        next();
+      });
+}
+
+  corsOptionDelegate(req,callback) {
+    let corsOptions;
+    corsOptions = {
+        origin:true,
+        allowedHeaders: 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,x-requested-with',
+        credentials:true
+    }
+    callback(null, corsOptions);
+}
   async setupRoutes() {
     // console.log("NodeApplication.Init.SetupRoutes... Started");
 
