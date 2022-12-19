@@ -103,70 +103,74 @@ export default class DataCofigurationBLL {
     return await dataConfigurationDAL.getRelations(campaignId,objId,subobject);      
   }
 
-  async generateData(campaignId,objId,request): Promise<any> {
-    var data =  await dataConfigurationDAL.generateData(campaignId,objId,request);
-    if (data.errorMessage || data.errors){
-      if (data.errors){
-        return{
-          errorMessage:"Validation errors occured",
-          data:data.result,
-          errors:data.errors
+  async generateData(campaignId, objId, request) {
+    var data:any = await dataConfigurationDAL.generateData(campaignId, objId, request);
+    if (data.errorMessage || data.errors) {
+        if (data.errors) {
+            return {
+                errorMessage: "Validation errors occured",
+                data: data.result,
+                sql:data.sql,
+                errors: data.errors
+            };
         }
-      }
     }
-    var yields = data.result
-    var sendToSF =request.is_send?true:false
-    if (sendToSF){
-      //establish salesforce connection
-      var objects =  await dataConfigurationDAL.getObjects(campaignId);
-      var obj = objects.find(x=>x.id === parseInt(objId));
-      try 
-      {
-        var payload = {
-          [obj.key_field] : yields
-        }
-        var cred:any = await dataConfigurationDAL.getCredential();
-        if (!cred || cred[0]==null){
-          return{
-            errorMessage:"Failed to push data. No credentials found",
-            data:yields
-          }
-        }
-        await salesforce.initialise(cred[0].user_name,cred[0].password,cred[0].token,cred[0].login_url)
-        var conn = await salesforce.getConnection();
-        if(conn){
-            //console.log(connection)
-            var response = await salesforce.sendData(payload,obj.api_endpoint);
-            if(response.err){
-            return{
-              errorMessage:"Failed to push data"+response.err,
-              data:yields
+    var yields = data.result;
+    var sendToSF = request.is_send ? true : false;
+    if (sendToSF) {
+        //establish salesforce connection
+        var objects = await dataConfigurationDAL.getObjects(campaignId);
+        var obj = objects.find(x => x.id === parseInt(objId));
+        try {
+            var payload = {
+                [obj.key_field]: yields
+            };
+            var cred = await dataConfigurationDAL.getCredential();
+            if (!cred || cred[0] == null) {
+                return {
+                    errorMessage: "Failed to push data. No credentials found",
+                    data: yields,
+                    sql:data.sql
+                };
             }
+            await salesforce.initialise(cred[0].user_name, cred[0].password, cred[0].token, cred[0].login_url);
+            var conn = await salesforce.getConnection();
+            if (conn) {
+                //console.log(connection)
+                var response = await salesforce.sendData(payload, obj.api_endpoint);
+                if (response.err) {
+                    return {
+                        errorMessage: "Failed to push data" + response.err,
+                        data: yields,
+                        sql:data.sql
+                    };
+                }
+                else {
+                    return {
+                        success: response.response,
+                        data: yields,
+                        sql:data.sql
+                    };
+                }
             }
             else {
-            return{
-              success:response.response,
-              data:yields
+                return {
+                    errorMessage: "Failed to establish connection with salesforce",
+                    data: yields,
+                    sql:data.sql
+                };
             }
-            }
-        } else {
-          return{
-            errorMessage:"Failed to establish connection with salesforce",
-            data:yields
-          }
         }
-      }
-      catch(e){
-        return{
-          errorMessage:"Failed to send data to salesforce"+e,
-          data:yields
+        catch (e) {
+            return {
+                errorMessage: "Failed to send data to salesforce" + e,
+                data: yields,
+                sql:data.sql
+            };
         }
-      }
     }
-
-    return {data:yields};
-      
-  }
+    return { data: yields, sql:data.sql };
+}
 
   
   async deleteTable(tableId): Promise<any> {

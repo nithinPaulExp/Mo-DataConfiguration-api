@@ -4,7 +4,6 @@ import bodyParser = require('body-parser');
 import morgan = require('morgan');
 import { Express, Request, Response, NextFunction } from 'express';
 import apiRouter from './api/routes';
-import mysqlClient from './services/mysqlclient';
 import Mapper from './services/mapper';
 var cors = require('cors');
 
@@ -18,19 +17,19 @@ export default class App {
     this.isDevelopmentEnv = this.env === 'development';
 
     // Db init seems to take more time, hence
-    const setUpDbConnectionPromise = this.setupDbConnection();
     const setUpAutoMapper = this.setupAutomapper();
     const setupExpressRoutesAndMiddlewarePromise = this.setupMiddleware()
       .then(() => this.setupRoutes())
       .then(() => this.setupErrorHandlers());
 
-    Promise.all([setUpDbConnectionPromise, setUpAutoMapper, setupExpressRoutesAndMiddlewarePromise]).then(() =>
+    Promise.all([setUpAutoMapper, setupExpressRoutesAndMiddlewarePromise]).then(() =>
       console.log('INIT COMPLETE'),
     );
   }
 
   async setupMiddleware() {    
-    this.app.use(cors(this.corsOptionDelegate));
+   
+    this.app.use(!this.isDevelopmentEnv?cors(this.corsOptionDelegate):cors());
     this.app.use(morgan(this.isDevelopmentEnv ? 'dev' : 'tiny'));
     this.app.use(bodyParser.urlencoded({ extended: false }));
     this.app.use(bodyParser.json());
@@ -39,7 +38,12 @@ export default class App {
     console.log('NodeApplication.Init.SetupMiddleware... Success');
   }
 
-  async setupResponseHeaders() {this.app.use(function(req, res, next) {
+  async setupResponseHeaders() {
+    
+    if (this.isDevelopmentEnv) {
+      return;
+    }
+    this.app.use(function(req, res, next) {
     var origin=req.header('Origin')?req.header('Origin'):req.header('origin');
     if (origin){
         res.setHeader('Origin',origin);            
@@ -95,17 +99,6 @@ export default class App {
     });
 
     console.log('NodeApplication.Init.SetupErrorHandlers... Success');
-  }
-
-  async setupDbConnection() {
-    try {
-      console.log('NodeApplication.Init.SetupDbConnection... Started');
-      const con = await mysqlClient.getMysqlConnection();
-      await con.promise().query('select 1 from campaign limit 1');
-      console.log('NodeApplication.Init.SetupDbConnection... Success');
-    } catch (err) {
-      console.error('NodeApplication.Init.SetupDbConnection... Failed', err);
-    }
   }
 
   async setupAutomapper() {

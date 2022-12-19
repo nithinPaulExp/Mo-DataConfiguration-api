@@ -1,3 +1,5 @@
+
+var moment = require("moment-timezone");
 export default  class Transformers {
 
     async convertToBool(value) {
@@ -42,5 +44,15 @@ export default  class Transformers {
     {        
         return !!value;
     };
+
+    async formatSFDate(date) {
+        if (date === null) {
+            return null;
+        }
+        else {
+            return moment.utc(date).format('YYYY-MM-DD');
+        }
+    }
+
 }
 
