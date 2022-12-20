@@ -1906,71 +1906,71 @@ export default class DataCofigurationDAL {
       };
   }
   async createConditions(campaignId, conditions) {
-      if (conditions.length > 0) {
-          var objects = await this.getObjects(campaignId);
-          var sql = "INSERT INTO sf_dataset_object_conditions (name,object_id,table_id,where_field,where_clause,group_by,campaign_id) VALUES ?";
-          var values = [];
-          for (let i = 0; i < conditions.length; i++) {
-              var condition = conditions[i];
-              var conditionObject = condition.object;
-              if (typeof condition.object === 'object') {
-                  var object = objects.find(x => x.name === condition.object.name);
-                  if (!object) {
-                      return false;
-                  }
-                  conditionObject = object.id;
-              }
-              else {
-                  var isValidObject = objects.find(x => x.id === parseInt(conditionObject));
-                  if (!isValidObject) {
-                      return false;
-                  }
-              }
-              var tables = await this.getTables(campaignId, conditionObject);
-              var conditionTable = condition.table;
-              if (typeof condition.table === 'object') {
-                  var table = tables.find(x => (x.name === condition.table.name && x.alias === condition.table.alias));
-                  if (!table) {
-                      return false;
-                  }
-                  conditionTable = table.id;
-              }
-              else {
-                  var isValidTable = tables.find(x => x.id === parseInt(conditionTable));
-                  if (!isValidTable) {
-                      return false;
-                  }
-              }
-              var fields = await this.getFieldsByTable(campaignId, conditionTable);
-              var conditionField = condition.field;
-              if (typeof condition.field === 'object') {
-                  var field = fields.find(x => (x.name === condition.field.name));
-                  if (!field) {
-                      return false;
-                  }
-                  conditionField = field.id;
-              }
-              else {
-                  var isValidTable = fields.find(x => x.id === parseInt(conditionField));
-                  if (!isValidTable) {
-                      return false;
-                  }
-              }
-              values.push([`${condition.name}`, `${conditionObject}`, `${conditionTable}`, `${conditionField}`, `${condition.where_clause}`, `${condition.group_by}`, campaignId]);
-          }
-          try {
-             await mysqlclient.getMysqlConnection();
-              const data:any = await mysqlclient.executeQuery(sql, [values]);
-              if (data[0] != null && data[0].affectedRows > 0) {
-                  return true;
-              }
-          }
-          catch (err) {
-              return false;
-          }
-      }
-      return true;
-  }
+    if (conditions.length > 0) {
+        var objects = await this.getObjects(campaignId);
+        var sql = "INSERT INTO sf_dataset_object_conditions (name,object_id,table_id,where_field,where_clause,group_by,campaign_id) VALUES ?";
+        var values = [];
+        for (let i = 0; i < conditions.length; i++) {
+            var condition = conditions[i];
+            var conditionObject = condition.object;
+            if (typeof condition.object === 'object') {
+                var object = objects.find(x => x.name === condition.object.name);
+                if (!object) {
+                    return false;
+                }
+                conditionObject = object.id;
+            }
+            else {
+                var isValidObject = objects.find(x => x.id === parseInt(conditionObject));
+                if (!isValidObject) {
+                    return false;
+                }
+            }
+            var tables = await this.getTables(campaignId, conditionObject);
+            var conditionTable = condition.table;
+            if (typeof condition.table === 'object') {
+                var table = tables.find(x => (x.name === condition.table.name && x.alias === condition.table.alias));
+                if (!table) {
+                    return false;
+                }
+                conditionTable = table.id;
+            }
+            else {
+                var isValidTable = tables.find(x => x.id === parseInt(conditionTable));
+                if (!isValidTable) {
+                    return false;
+                }
+            }
+            var fields = await this.getFieldsByTable(campaignId, conditionTable);
+            var conditionField = condition.field;
+            if (typeof condition.field === 'object') {
+                var field = fields.find(x => (x.name === condition.field.name));
+                if (!field) {
+                    return false;
+                }
+                conditionField = field.id;
+            }
+            else {
+                var isValidTable = fields.find(x => x.id === parseInt(conditionField));
+                if (!isValidTable) {
+                    return false;
+                }
+            }
+            values.push([`${condition.name}`, `${conditionObject}`, `${conditionTable}`, `${conditionField}`, `${condition.where_clause}`, condition.group_by, campaignId]);
+        }
+        try {
+            let con = await mysqlclient.getMysqlConnection();
+            const data = await mysqlclient.executeQuery(sql, [values]);
+            if (data[0] != null && data[0].affectedRows > 0) {
+                return true;
+            }
+        }
+        catch (err) {
+            return false;
+        }
+    }
+    return true;
+}
   async createSubConditionMapping(subConditionId, condition, campaignId, conditionObject) {
       var tables = await this.getTables(campaignId, conditionObject);
       if (condition.fields && condition.fields.length > 0) {
@@ -2150,44 +2150,55 @@ export default class DataCofigurationDAL {
       return true;
   }
   async updateConditions(campaignId, condition, id) {
-      var objects = await this.getObjects(campaignId);
-      var conditionObject = condition.object;
-      var isValidObject = objects.find(x => x.id === parseInt(conditionObject));
-      if (!isValidObject) {
-          return {
-              errorMessage: `Invalid object selected.`
-          };
-      }
-      var tables = await this.getTables(campaignId, conditionObject);
-      var conditionTable = condition.table;
-      var isValidTable = tables.find(x => x.id === parseInt(conditionTable));
-      if (!isValidTable) {
-          return {
-              errorMessage: `Invalid table selected.`
-          };
-      }
-      var fields = await this.getFieldsByTable(campaignId, conditionTable);
-      var conditionField = condition.field;
-      var isValidTable = fields.find(x => x.id === parseInt(conditionField));
-      if (!isValidTable) {
-          return {
-              errorMessage: `Invalid field selected.`
-          };
-      }
-      var sql = `UPDATE sf_dataset_object_conditions SET name=?,object_id=?,table_id=?,where_field=?,where_clause=?
-                ,group_by =? WHERE campaign_id = ? AND id=?`;
-      try {
-         await mysqlclient.getMysqlConnection();
-          const data:any = await mysqlclient.executeQuery(sql, [`${condition.name}`, `${conditionObject}`, `${conditionTable}`, `${conditionField}`, `${condition.where_clause}`, `${condition.group_by}`, campaignId, id]);
-          if (data[0] != null && data[0].affectedRows > 0) {
-              return true;
-          }
-      }
-      catch (err) {
-          return false;
-      }
-      return true;
-  }
+    var objects = await this.getObjects(campaignId);
+    var conditionObject = condition.object;
+    var isValidObject = objects.find(x => x.id === parseInt(conditionObject));
+    if (!isValidObject) {
+        return {
+            errorMessage: `Invalid object selected.`
+        };
+    }
+    var tables = await this.getTables(campaignId, conditionObject);
+    var conditionTable = condition.table;
+    var isValidTable = tables.find(x => x.id === parseInt(conditionTable));
+    if (!isValidTable) {
+        return {
+            errorMessage: `Invalid table selected.`
+        };
+    }
+    var fields = await this.getFieldsByTable(campaignId, conditionTable);
+    var conditionField = condition.field;
+    var isValidTable = fields.find(x => x.id === parseInt(conditionField));
+    if (!isValidTable) {
+        return {
+            errorMessage: `Invalid field selected.`
+        };
+    }
+    var sql = `UPDATE sf_dataset_object_conditions SET name=?,object_id=?,table_id=?,where_field=?,where_clause=?`;
+    sql+= condition.group_by?`,group_by =?`:`,group_by =''`;
+    sql+= ` WHERE campaign_id = ? AND id=?`;
+    console.log("sql==>",sql);
+    var values = [`${condition.name}`, `${conditionObject}`, `${conditionTable}`, `${conditionField}`, `${condition.where_clause}`];
+    if (condition.group_by )
+    {
+        values.push(condition.group_by);
+    }
+
+    values.push(campaignId);
+    values.push(id);
+    try {
+        await mysqlclient.getMysqlConnection();
+        const data = await mysqlclient.executeQuery(sql, values);
+        if (data[0] != null && data[0].affectedRows > 0) {
+            return true;
+        }
+    }
+    catch (err) {
+        console.log(err);
+        return false;
+    }
+    return true;
+}
   async createObjects(campaignId, objects) {
       if (objects.length > 0) {
           var sql = "INSERT INTO sf_dataset_objects (name,display_name,api_endpoint, sqs_topic_arn,key_field,campaign_id) VALUES ?";
